@@ -1,0 +1,59 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --masters-green: #1a5c38;
+  --masters-green-light: #2d7a50;
+  --masters-gold: #c9a84c;
+  --masters-gold-light: #e8c97a;
+
+  --bg-page: #f5f4f0;
+  --bg-card: #ffffff;
+  --bg-surface: #f0efe9;
+  --bg-surface-2: #e8e7e0;
+
+  --text-primary: #1a1a18;
+  --text-secondary: #5a5a55;
+  --text-tertiary: #9a9a94;
+  --text-on-green: #ffffff;
+
+  --border: rgba(0,0,0,0.10);
+  --border-strong: rgba(0,0,0,0.18);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+
+  /* Player colors */
+  --color-sullivan: #185FA5;
+  --color-mikael: #534AB7;
+  --color-mike: #BA7517;
+  --color-buer: #993C1D;
+  --color-robbie: #0F6E56;
+  --color-caleb: #993556;
+  --color-alex: #5F5E5A;
+}
+
+html { font-size: 16px; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* Score colors */
+.score-under  { color: #0F6E56; font-weight: 500; }
+.score-even   { color: var(--text-secondary); }
+.score-over   { color: #A32D2D; }
+
+/* Cut status */
+.status-cut     { color: #A32D2D; }
+.status-danger  { color: #BA7517; }
+.status-safe    { color: #0F6E56; }
+
+/* Utility */
+.truncate { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
