@@ -61,7 +61,7 @@ function determinePhase(period: number, completed: boolean): TournamentPhase {
 }
 
 export async function fetchLeaderboard(): Promise<LeaderboardSnapshot> {
-  const res = await axios.get<EspnScoreboard>(`${SCOREBOARD_URL}?limit=200`, {
+  const res = await axios.get<EspnEventsResponse>(`${EVENTS_URL}?limit=200`, {
     timeout: 10000,
     headers: {
       "User-Agent": "Mozilla/5.0 (compatible; MastersPool/1.0)",
