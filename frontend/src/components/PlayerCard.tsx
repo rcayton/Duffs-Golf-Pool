@@ -6,6 +6,7 @@ interface Props {
   phase: TournamentPhase;
   isLeader: boolean;
   isLuckiest: boolean;
+  isReigningChamp: boolean;
 }
 
 function CutBadge({ status }: { status: string; cutMade?: boolean | null }) {
@@ -94,7 +95,7 @@ function DualBars({ winProb, cutProb, playerColor }: DualBarsProps) {
   );
 }
 
-export function PlayerCard({ player, isLeader, isLuckiest }: Props) {
+export function PlayerCard({ player, isLeader, isLuckiest, isReigningChamp }: Props) {
   const color = PLAYER_COLORS[player.id] ?? "#5a5a55";
   const bg = PLAYER_BG_COLORS[player.id] ?? "#F1EFE8";
 
@@ -133,6 +134,15 @@ export function PlayerCard({ player, isLeader, isLuckiest }: Props) {
                   color: "var(--text-secondary)",
                 }}>
                   {player.combined_win_odds.toFixed(1)}% to win
+                </span>
+              )}
+              {isReigningChamp && (
+                <span style={{
+                  fontSize: 10, fontWeight: 700, padding: "1px 7px",
+                  borderRadius: 10, background: "#FFF8E1", color: "#B8860B",
+                  border: "1px solid #FFD700", letterSpacing: "0.02em",
+                }}>
+                  🏆 Reigning Champ
                 </span>
               )}
               {isLuckiest && (

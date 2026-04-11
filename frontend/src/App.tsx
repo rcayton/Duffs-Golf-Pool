@@ -143,6 +143,12 @@ export default function App() {
     .sort((a, b) => (a.best_score ?? 99) - (b.best_score ?? 99));
   const leaderId = sortedByScore[0]?.id ?? null;
 
+  // Reigning champ = winner of the most recently archived major (excluding current)
+  const lastArchived = [...majors]
+    .filter((m) => m.is_archived && !m.is_active)
+    .sort((a, b) => new Date(b.archive_summary?.archived_at ?? 0).getTime() - new Date(a.archive_summary?.archived_at ?? 0).getTime())[0];
+  const reigningChampId = lastArchived?.archive_summary?.winner_id ?? null;
+
   return (
     <>
       <Header
@@ -172,6 +178,7 @@ export default function App() {
                 phase={snapshot.phase}
                 isLeader={player.id === leaderId}
                 isLuckiest={luckiest.includes(player.id)}
+                isReigningChamp={player.id === reigningChampId}
               />
             ))}
           </div>
