@@ -84,7 +84,7 @@ export const POOL_PLAYERS: PoolPlayer[] = [
     dues_owed: 40,
     picks: [
       { round_slot: 1, golfer_name: "Xander Schauffele", espn_id: null },
-      { round_slot: 2, golfer_name: "Seamus Power", espn_id: null },
+      { round_slot: 2, golfer_name: "Matt Fitzpatrick", espn_id: null },
       { round_slot: 3, golfer_name: "Justin Thomas", espn_id: null },
       { round_slot: 4, golfer_name: "Akshay Bhatia", espn_id: null },
     ],
