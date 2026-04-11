@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { loadSnapshot, loadOdds, saveSnapshot, saveOdds, listArchivedMajors, loadArchive } from "../lib/cache";
+import { loadSnapshot, loadOdds, saveSnapshot, saveOdds, listArchivedMajors, loadArchive, loadWinProbHistory } from "../lib/cache";
 import { buildDashboard } from "../lib/pool-engine";
 import { fetchLeaderboard } from "../services/masters";
 import { fetchWinOdds } from "../services/odds";
@@ -103,6 +103,16 @@ router.get("/majors", async (_req: Request, res: Response) => {
       archive_summary: archived.find((a) => a.major_id === m.id) ?? null,
     }));
     return res.json(majors);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/charts — win probability history for the active major
+router.get("/charts", async (_req: Request, res: Response) => {
+  try {
+    const history = await loadWinProbHistory(ACTIVE_MAJOR.id);
+    return res.json({ major_id: ACTIVE_MAJOR.id, history });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

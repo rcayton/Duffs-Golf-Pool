@@ -1,5 +1,5 @@
 
-export type TabId = "picks" | "leaderboard" | "pot" | "history";
+export type TabId = "picks" | "leaderboard" | "pot" | "history" | "charts";
 
 interface Props {
   active: TabId;
@@ -11,6 +11,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "leaderboard", label: "Leaderboard" },
   { id: "pot", label: "Pot breakdown" },
   { id: "history", label: "Duffs Leaderboard" },
+  { id: "charts",  label: "Charts" },
 ];
 
 export function Tabs({ active, onChange }: Props) {

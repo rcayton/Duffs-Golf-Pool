@@ -2,10 +2,11 @@ import { supabase } from "./supabase";
 import { LeaderboardSnapshot, OddsPlayer, EnrichedPoolPlayer } from "../types";
 import { MajorConfig } from "./major-config";
 
-const CACHE_TABLE   = "leaderboard_cache";
-const ODDS_TABLE    = "odds_cache";
-const ARCHIVE_TABLE = "major_archives";
-const CACHE_KEY     = "masters_2026";
+const CACHE_TABLE    = "leaderboard_cache";
+const ODDS_TABLE     = "odds_cache";
+const ARCHIVE_TABLE  = "major_archives";
+const HISTORY_TABLE  = "win_prob_history";
+const CACHE_KEY      = "masters_2026";
 
 // ─── Live snapshot cache ───────────────────────────────────────────────────────
 
@@ -108,4 +109,36 @@ export async function loadArchive(majorId: string): Promise<MajorArchive | null>
     .from(ARCHIVE_TABLE).select("*").eq("major_id", majorId).single();
   if (error || !data) return null;
   return data as MajorArchive;
+}
+
+// ─── Win probability history ───────────────────────────────────────────────────
+
+export interface WinProbSnapshot {
+  captured_at: string;
+  phase: string;
+  probs: Record<string, number>; // player_id → combined_win_odds
+}
+
+export async function saveWinProbSnapshot(
+  majorId: string,
+  phase: string,
+  probs: Record<string, number>
+): Promise<void> {
+  const { error } = await supabase.from(HISTORY_TABLE).insert({
+    major_id:    majorId,
+    phase,
+    captured_at: new Date().toISOString(),
+    probs,
+  });
+  if (error) console.error("Failed to save win prob snapshot:", error.message);
+}
+
+export async function loadWinProbHistory(majorId: string): Promise<WinProbSnapshot[]> {
+  const { data, error } = await supabase
+    .from(HISTORY_TABLE)
+    .select("captured_at, phase, probs")
+    .eq("major_id", majorId)
+    .order("captured_at", { ascending: true });
+  if (error || !data) return [];
+  return data as WinProbSnapshot[];
 }

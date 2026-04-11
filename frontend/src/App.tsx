@@ -7,6 +7,7 @@ import { Leaderboard } from "./components/Leaderboard";
 import { PotBreakdown } from "./components/PotBreakdown";
 import { SelectionLeaderboard } from "./components/SelectionLeaderboard";
 import { ArchivedPicks } from "./components/ArchivedPicks";
+import { WinProbChart } from "./components/WinProbChart";
 import { Tabs, TabId } from "./components/Tabs";
 import { fetchMajors, fetchMajorArchive } from "./lib/api";
 import { MajorInfo, MajorArchive } from "./lib/types";
@@ -214,6 +215,10 @@ export default function App() {
 
         {tab === "history" && (
           <SelectionLeaderboard data={data!} />
+        )}
+
+        {tab === "charts" && (
+          <WinProbChart poolPlayers={pool_players} />
         )}
       </main>
     </>

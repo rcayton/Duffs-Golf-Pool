@@ -7,7 +7,7 @@ import { router } from "./api/routes";
 import { fetchLeaderboard as fetchMasters } from "./services/masters";
 import { fetchLeaderboard as fetchEspn } from "./services/espn";
 import { fetchWinOdds, getRemainingTokens } from "./services/odds";
-import { saveSnapshot, saveOdds, loadOdds, isArchived, saveArchive } from "./lib/cache";
+import { saveSnapshot, saveOdds, loadOdds, isArchived, saveArchive, saveWinProbSnapshot } from "./lib/cache";
 import { buildDashboard } from "./lib/pool-engine";
 import { ACTIVE_MAJOR } from "./lib/major-config";
 import { LeaderboardSnapshot } from "./types";
@@ -104,6 +104,16 @@ async function pollLeaderboard(): Promise<void> {
       `phase=${snapshot.phase} round=${snapshot.current_round} | ` +
       `cut=${snapshot.cut_line ?? "n/a"}`
     );
+
+    // Record win probability history during active play (not pre-tournament)
+    if (snapshot.phase !== "pre" && snapshot.phase !== "complete") {
+      const odds = await loadOdds();
+      const dashboard = buildDashboard(snapshot, odds);
+      const probs: Record<string, number> = {};
+      dashboard.pool_players.forEach((p) => { probs[p.id] = p.combined_win_odds; });
+      await saveWinProbSnapshot(ACTIVE_MAJOR.id, snapshot.phase, probs);
+    }
+
     await maybeArchive(snapshot);
   } catch (err: any) {
     console.error("  Leaderboard error:", err.message);
