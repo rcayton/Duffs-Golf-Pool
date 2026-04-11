@@ -5,6 +5,7 @@ import { PotSummary } from "./components/PotSummary";
 import { PlayerCard } from "./components/PlayerCard";
 import { Leaderboard } from "./components/Leaderboard";
 import { PotBreakdown } from "./components/PotBreakdown";
+import { SelectionLeaderboard } from "./components/SelectionLeaderboard";
 import { Tabs, TabId } from "./components/Tabs";
 
 export default function App() {
@@ -117,6 +118,11 @@ export default function App() {
           <div style={{ maxWidth: 560 }}>
             <PotBreakdown data={data} />
           </div>
+        )}
+
+        {/* Selection Leaderboard */}
+        {tab === "history" && (
+          <SelectionLeaderboard data={data} />
         )}
       </main>
     </>
