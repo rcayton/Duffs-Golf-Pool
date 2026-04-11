@@ -27,10 +27,13 @@ export function Header({ phase, round, lastUpdated, onRefresh }: Props) {
         gap: 12,
       }}>
         <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.01em", marginBottom: 2 }}>
+            Duffs Majors Pool
+          </h1>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 2 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: "-0.01em" }}>
-              2026 Masters Pool
-            </h1>
+            <span style={{ fontSize: 15, fontWeight: 500, opacity: 0.9 }}>
+              2026 Masters
+            </span>
             <span style={{
               fontSize: 11,
               fontWeight: 600,
