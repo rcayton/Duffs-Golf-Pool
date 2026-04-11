@@ -143,6 +143,19 @@ export default function App() {
     .sort((a, b) => (a.best_score ?? 99) - (b.best_score ?? 99));
   const leaderId = sortedByScore[0]?.id ?? null;
 
+  // Sort pool players by combined win % descending for card order
+  const sortedByWin = [...pool_players].sort(
+    (a, b) => b.combined_win_odds - a.combined_win_odds
+  );
+
+  // Top-10 position map: espn_id → position string, only for top 10
+  const top10Positions = new Map<string, string>();
+  snapshot.players
+    .filter((p) => p.status === "active" || p.status === "complete")
+    .sort((a, b) => a.score_to_par - b.score_to_par)
+    .slice(0, 10)
+    .forEach((p) => top10Positions.set(p.espn_id, p.position));
+
   // Reigning champ = winner of the most recently archived major (excluding current)
   const lastArchived = [...majors]
     .filter((m) => m.is_archived && !m.is_active)
@@ -171,7 +184,7 @@ export default function App() {
             gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
             gap: "1rem",
           }}>
-            {pool_players.map((player) => (
+            {sortedByWin.map((player, i) => (
               <PlayerCard
                 key={player.id}
                 player={player}
@@ -179,6 +192,8 @@ export default function App() {
                 isLeader={player.id === leaderId}
                 isLuckiest={luckiest.includes(player.id)}
                 isReigningChamp={player.id === reigningChampId}
+                rank={i + 1}
+                top10Positions={top10Positions}
               />
             ))}
           </div>

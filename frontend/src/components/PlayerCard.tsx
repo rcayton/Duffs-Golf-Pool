@@ -7,6 +7,8 @@ interface Props {
   isLeader: boolean;
   isLuckiest: boolean;
   isReigningChamp: boolean;
+  rank: number;                          // pool player rank by win %
+  top10Positions: Map<string, string>;   // espn_id → position string ("T3", "1")
 }
 
 function CutBadge({ status }: { status: string; cutMade?: boolean | null }) {
@@ -95,9 +97,21 @@ function DualBars({ winProb, cutProb, playerColor }: DualBarsProps) {
   );
 }
 
-export function PlayerCard({ player, isLeader, isLuckiest, isReigningChamp }: Props) {
+export function PlayerCard({ player, isLeader, isLuckiest, isReigningChamp, rank, top10Positions, phase }: Props) {
   const color = PLAYER_COLORS[player.id] ?? "#5a5a55";
   const bg = PLAYER_BG_COLORS[player.id] ?? "#F1EFE8";
+  const showLeaderPos = phase === "round3" || phase === "round4" || phase === "complete";
+
+  // Sort picks: active by score asc, then cut/wd at bottom
+  const sortedPicks = [...player.enriched_picks].sort((a, b) => {
+    const aOut = a.score?.status === "cut" || a.score?.status === "wd" || a.score?.status === "dq";
+    const bOut = b.score?.status === "cut" || b.score?.status === "wd" || b.score?.status === "dq";
+    if (aOut && !bOut) return 1;
+    if (!aOut && bOut) return -1;
+    const aScore = a.score?.score_to_par ?? 99;
+    const bScore = b.score?.score_to_par ?? 99;
+    return aScore - bScore;
+  });
 
   return (
     <div style={{
@@ -123,7 +137,7 @@ export function PlayerCard({ player, isLeader, isLuckiest, isReigningChamp }: Pr
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 12, fontWeight: 700, flexShrink: 0,
           }}>
-            {player.name[0]}
+            {rank}
           </div>
           <div>
             <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-primary)", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
@@ -179,10 +193,11 @@ export function PlayerCard({ player, isLeader, isLuckiest, isReigningChamp }: Pr
       </div>
 
       {/* Pick rows */}
-      {player.enriched_picks.map((pick) => {
+      {sortedPicks.map((pick) => {
         const s = pick.score;
         const hasScore = !!s && s.thru !== "-";
         const faded = s?.status === "cut" || s?.status === "wd";
+        const leaderPos = showLeaderPos && s?.espn_id ? top10Positions.get(s.espn_id) : undefined;
 
         return (
           <div key={pick.round_slot} style={{
@@ -196,8 +211,17 @@ export function PlayerCard({ player, isLeader, isLuckiest, isReigningChamp }: Pr
           }}>
             {/* Golfer name + cut badge */}
             <div>
-              <div style={{ fontSize: 13, color: "var(--text-primary)" }} className="truncate">
+              <div style={{ fontSize: 13, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 5 }} className="truncate">
                 {pick.golfer_name}
+                {leaderPos && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, padding: "1px 5px",
+                    borderRadius: 8, background: "#E8F5E9", color: "#0F6E56",
+                    border: "1px solid #A5D6A7", flexShrink: 0,
+                  }}>
+                    {leaderPos}
+                  </span>
+                )}
               </div>
               {s && (
                 <div style={{ marginTop: 2 }}>
