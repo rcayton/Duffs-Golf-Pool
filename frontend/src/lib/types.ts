@@ -48,6 +48,7 @@ export interface EnrichedPoolPlayer {
   best_score: number | null;
   leading_golfer: string | null;
   combined_win_odds: number; // probability all 4 picks win (product of individual odds)
+  luck_score: number;
 }
 
 export interface PotSummary {
@@ -73,4 +74,5 @@ export interface DashboardData {
   pool_players: EnrichedPoolPlayer[];
   odds: OddsPlayer[];
   pot: PotSummary;
+  luckiest: string[];
 }

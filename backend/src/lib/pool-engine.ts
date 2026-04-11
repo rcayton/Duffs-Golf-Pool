@@ -171,6 +171,33 @@ export function monteCarloWinProbs(
   return probs;
 }
 
+// ─── Luck score model ──────────────────────────────────────────────────────────
+// Measures how close each pool player's picks were to the cut without missing it.
+// Only meaningful in round 3+ when cut_made is finalised.
+//
+//   At cut line exactly       → +5 pts  (luckiest possible)
+//   Each stroke below cut     → −1 pt   (further below = less lucky)
+//   5+ strokes below cut      →  0 pts  (safely through, no luck involved)
+//   Missed cut                → −10 pts (big penalty)
+//   Not yet determined        →  0 pts
+
+const LUCK_MAX     = 5;   // points for sitting exactly at the cut line
+const LUCK_PENALTY = -10; // penalty per pick that missed the cut
+// Points drop by 1 per stroke below cut; 5+ strokes below earns 0 (LUCK_MAX = threshold)
+
+function pickLuckPoints(
+  score: GolferScore | undefined,
+  cutLine: number | null
+): number {
+  if (!score || score.cut_made === null) return 0;
+  if (score.cut_made === false)          return LUCK_PENALTY;
+
+  // Made the cut — reward proximity to the cut line
+  const cut = cutLine ?? 3; // fallback if cut line unknown
+  const strokesBelow = cut - score.score_to_par; // positive = safely under cut
+  return Math.max(0, LUCK_MAX - strokesBelow);
+}
+
 // ─── Cut probability model ─────────────────────────────────────────────────────
 
 function estimateCutProb(
@@ -262,6 +289,11 @@ export function enrichPoolData(
       (p) => p.score?.score_to_par === bestScore
     );
 
+    const luckScore = enrichedPicks.reduce(
+      (sum, p) => sum + pickLuckPoints(p.score, snapshot.cut_line),
+      0
+    );
+
     return {
       ...player,
       enriched_picks:    enrichedPicks,
@@ -269,6 +301,7 @@ export function enrichPoolData(
       cut_penalties:     cutPenalties,
       best_score:        bestScore,
       leading_golfer:    leadingPick?.golfer_name ?? null,
+      luck_score:        luckScore,
     };
   });
 }
@@ -303,5 +336,19 @@ export function buildDashboard(
 ): DashboardData {
   const poolPlayers = enrichPoolData(snapshot, odds);
   const pot         = calculatePot(poolPlayers);
-  return { snapshot, pool_players: poolPlayers, odds, pot };
+
+  // Luckiest award: highest luck_score after cut is final (round 3+)
+  // Ties are included. No award pre-cut.
+  const cutFinalised = ["round3", "round4", "complete"].includes(snapshot.phase);
+  let luckiest: string[] = [];
+  if (cutFinalised) {
+    const maxLuck = Math.max(...poolPlayers.map((p) => p.luck_score));
+    if (maxLuck > 0) {
+      luckiest = poolPlayers
+        .filter((p) => p.luck_score === maxLuck)
+        .map((p) => p.id);
+    }
+  }
+
+  return { snapshot, pool_players: poolPlayers, odds, pot, luckiest };
 }

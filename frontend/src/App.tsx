@@ -59,7 +59,7 @@ export default function App() {
     );
   }
 
-  const { snapshot, pool_players, pot } = data;
+  const { snapshot, pool_players, pot, luckiest } = data;
 
   // Determine leader — pool player with the best (lowest) leading score
   const sortedByScore = [...pool_players]
@@ -96,6 +96,7 @@ export default function App() {
                 player={player}
                 phase={snapshot.phase}
                 isLeader={player.id === leaderId}
+                isLuckiest={luckiest.includes(player.id)}
               />
             ))}
           </div>

@@ -5,6 +5,7 @@ interface Props {
   player: EnrichedPoolPlayer;
   phase: TournamentPhase;
   isLeader: boolean;
+  isLuckiest: boolean;
 }
 
 function CutBadge({ status }: { status: string; cutMade?: boolean | null }) {
@@ -93,7 +94,7 @@ function DualBars({ winProb, cutProb, playerColor }: DualBarsProps) {
   );
 }
 
-export function PlayerCard({ player, isLeader }: Props) {
+export function PlayerCard({ player, isLeader, isLuckiest }: Props) {
   const color = PLAYER_COLORS[player.id] ?? "#5a5a55";
   const bg = PLAYER_BG_COLORS[player.id] ?? "#F1EFE8";
 
@@ -124,14 +125,23 @@ export function PlayerCard({ player, isLeader }: Props) {
             {player.name[0]}
           </div>
           <div>
-            <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-primary)" }}>
+            <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-primary)", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
               {player.name}
               {player.combined_win_odds > 0 && (
                 <span style={{
                   fontSize: 11, fontWeight: 400,
-                  color: "var(--text-secondary)", marginLeft: 8,
+                  color: "var(--text-secondary)",
                 }}>
                   {player.combined_win_odds.toFixed(1)}% to win
+                </span>
+              )}
+              {isLuckiest && (
+                <span style={{
+                  fontSize: 10, fontWeight: 700, padding: "1px 7px",
+                  borderRadius: 10, background: "#E8F5E9", color: "#2E7D32",
+                  border: "1px solid #A5D6A7", letterSpacing: "0.02em",
+                }}>
+                  🍀 Luckiest
                 </span>
               )}
             </div>

@@ -51,6 +51,7 @@ export interface EnrichedPoolPlayer extends PoolPlayer {
   best_score: number | null; // best current score among picks
   leading_golfer: string | null;
   combined_win_odds: number; // product of individual win probabilities
+  luck_score: number;        // cut-proximity score (see pool-engine)
 }
 
 export interface PotSummary {
@@ -76,4 +77,5 @@ export interface DashboardData {
   pool_players: EnrichedPoolPlayer[];
   odds: OddsPlayer[];
   pot: PotSummary;
+  luckiest: string[];  // pool player ids who share the highest luck_score
 }
