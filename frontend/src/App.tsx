@@ -148,12 +148,10 @@ export default function App() {
     (a, b) => b.combined_win_odds - a.combined_win_odds
   );
 
-  // Top-10 position map: espn_id → position string, only for top 10
+  // Position map: espn_id → position string for all active/complete players
   const top10Positions = new Map<string, string>();
   snapshot.players
     .filter((p) => p.status === "active" || p.status === "complete")
-    .sort((a, b) => a.score_to_par - b.score_to_par)
-    .slice(0, 10)
     .forEach((p) => top10Positions.set(p.espn_id, p.position));
 
   // Reigning champ = winner of the most recently archived major (excluding current)
