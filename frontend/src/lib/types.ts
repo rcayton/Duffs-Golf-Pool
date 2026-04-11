@@ -76,3 +76,30 @@ export interface DashboardData {
   pot: PotSummary;
   luckiest: string[];
 }
+
+export interface MajorInfo {
+  id: string;
+  name: string;
+  short_name: string;
+  year: number;
+  dates: string;
+  source: "masters" | "espn";
+  is_active: boolean;
+  is_archived: boolean;
+  archive_summary: {
+    winner_id: string | null;
+    pot_total: number;
+    archived_at: string;
+  } | null;
+}
+
+export interface MajorArchive {
+  major_id: string;
+  major_name: string;
+  short_name: string;
+  pool_players: EnrichedPoolPlayer[];
+  snapshot: LeaderboardSnapshot;
+  pot_total: number;
+  winner_id: string | null;
+  archived_at: string;
+}

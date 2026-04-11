@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDashboard } from "./hooks/useDashboard";
 import { Header } from "./components/Header";
 import { PotSummary } from "./components/PotSummary";
@@ -6,13 +6,50 @@ import { PlayerCard } from "./components/PlayerCard";
 import { Leaderboard } from "./components/Leaderboard";
 import { PotBreakdown } from "./components/PotBreakdown";
 import { SelectionLeaderboard } from "./components/SelectionLeaderboard";
+import { ArchivedPicks } from "./components/ArchivedPicks";
 import { Tabs, TabId } from "./components/Tabs";
+import { fetchMajors, fetchMajorArchive } from "./lib/api";
+import { MajorInfo, MajorArchive } from "./lib/types";
 
 export default function App() {
   const { data, loading, error, refresh } = useDashboard();
   const [tab, setTab] = useState<TabId>("picks");
 
-  if (loading) {
+  // Major selector state
+  const [majors, setMajors] = useState<MajorInfo[]>([]);
+  const [selectedMajorId, setSelectedMajorId] = useState<string>("masters_2026");
+  const [archive, setArchive] = useState<MajorArchive | null>(null);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+
+  // Fetch major list on mount
+  useEffect(() => {
+    fetchMajors().then((list) => {
+      setMajors(list);
+      // Default to the active major
+      const active = list.find((m) => m.is_active);
+      if (active) setSelectedMajorId(active.id);
+    });
+  }, []);
+
+  // When a past major is selected, load its archive
+  const activeMajor = majors.find((m) => m.is_active);
+  const isViewingLive = selectedMajorId === (activeMajor?.id ?? "masters_2026");
+
+  useEffect(() => {
+    if (isViewingLive) {
+      setArchive(null);
+      return;
+    }
+    setArchiveLoading(true);
+    fetchMajorArchive(selectedMajorId).then((a) => {
+      setArchive(a);
+      setArchiveLoading(false);
+    });
+  }, [selectedMajorId, isViewingLive]);
+
+  // ─── Loading / error screens ────────────────────────────────────────────────
+
+  if (loading && isViewingLive) {
     return (
       <div style={{
         minHeight: "100vh", display: "flex", alignItems: "center",
@@ -31,7 +68,7 @@ export default function App() {
     );
   }
 
-  if (error || !data) {
+  if ((error || !data) && isViewingLive) {
     return (
       <div style={{
         minHeight: "100vh", display: "flex", alignItems: "center",
@@ -60,9 +97,47 @@ export default function App() {
     );
   }
 
-  const { snapshot, pool_players, pot, luckiest } = data;
+  // ─── Archived major view ─────────────────────────────────────────────────────
 
-  // Determine leader — pool player with the best (lowest) leading score
+  if (!isViewingLive) {
+    const selectedMajor = majors.find((m) => m.id === selectedMajorId);
+    return (
+      <>
+        <Header
+          phase="complete"
+          round={4}
+          lastUpdated={archive?.archived_at ?? new Date().toISOString()}
+          onRefresh={refresh}
+          majors={majors}
+          selectedMajorId={selectedMajorId}
+          onSelectMajor={setSelectedMajorId}
+        />
+        <main style={{ maxWidth: 1100, margin: "0 auto", padding: "1.25rem 1rem 3rem" }}>
+          {archiveLoading && (
+            <div style={{ textAlign: "center", padding: "3rem", color: "var(--text-secondary)" }}>
+              Loading {selectedMajor?.short_name ?? "major"}...
+            </div>
+          )}
+          {!archiveLoading && !archive && (
+            <div style={{
+              textAlign: "center", padding: "3rem",
+              color: "var(--text-secondary)", fontSize: 14,
+            }}>
+              {selectedMajor?.is_archived === false
+                ? `${selectedMajor.short_name} hasn't started yet — picks will appear here when the tournament is complete.`
+                : "No archived data found for this major."}
+            </div>
+          )}
+          {!archiveLoading && archive && <ArchivedPicks archive={archive} />}
+        </main>
+      </>
+    );
+  }
+
+  // ─── Live major view ─────────────────────────────────────────────────────────
+
+  const { snapshot, pool_players, pot, luckiest } = data!;
+
   const sortedByScore = [...pool_players]
     .filter((p) => p.best_score !== null)
     .sort((a, b) => (a.best_score ?? 99) - (b.best_score ?? 99));
@@ -75,16 +150,15 @@ export default function App() {
         round={snapshot.current_round}
         lastUpdated={snapshot.last_updated}
         onRefresh={refresh}
+        majors={majors}
+        selectedMajorId={selectedMajorId}
+        onSelectMajor={setSelectedMajorId}
       />
 
       <main style={{ maxWidth: 1100, margin: "0 auto", padding: "1.25rem 1rem 3rem" }}>
-        {/* Pot metrics */}
         <PotSummary pot={pot} playerCount={pool_players.length} />
-
-        {/* Tab navigation */}
         <Tabs active={tab} onChange={setTab} />
 
-        {/* Picks view */}
         {tab === "picks" && (
           <div style={{
             display: "grid",
@@ -103,7 +177,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Leaderboard view */}
         {tab === "leaderboard" && (
           <Leaderboard
             players={snapshot.players}
@@ -113,16 +186,14 @@ export default function App() {
           />
         )}
 
-        {/* Pot view */}
         {tab === "pot" && (
           <div style={{ maxWidth: 560 }}>
-            <PotBreakdown data={data} />
+            <PotBreakdown data={data!} />
           </div>
         )}
 
-        {/* Selection Leaderboard */}
         {tab === "history" && (
-          <SelectionLeaderboard data={data} />
+          <SelectionLeaderboard data={data!} />
         )}
       </main>
     </>

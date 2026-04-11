@@ -79,3 +79,12 @@ export interface DashboardData {
   pot: PotSummary;
   luckiest: string[];  // pool player ids who share the highest luck_score
 }
+
+export interface MajorSummary {
+  major_id: string;
+  major_name: string;
+  short_name: string;
+  winner_id: string | null;
+  pot_total: number;
+  archived_at: string;
+}

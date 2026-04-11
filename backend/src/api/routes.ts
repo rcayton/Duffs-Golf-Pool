@@ -1,8 +1,9 @@
 import { Router, Request, Response } from "express";
-import { loadSnapshot, loadOdds, saveSnapshot, saveOdds } from "../lib/cache";
+import { loadSnapshot, loadOdds, saveSnapshot, saveOdds, listArchivedMajors, loadArchive } from "../lib/cache";
 import { buildDashboard } from "../lib/pool-engine";
 import { fetchLeaderboard } from "../services/masters";
 import { fetchWinOdds } from "../services/odds";
+import { ALL_MAJORS, ACTIVE_MAJOR } from "../lib/major-config";
 
 export const router = Router();
 
@@ -88,4 +89,34 @@ router.post("/refresh", async (_req: Request, res: Response) => {
 // GET /api/health
 router.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// GET /api/majors — list of all known majors with archive status
+router.get("/majors", async (_req: Request, res: Response) => {
+  try {
+    const archived = await listArchivedMajors();
+    const archivedIds = new Set(archived.map((a) => a.major_id));
+    const majors = ALL_MAJORS.map((m) => ({
+      ...m,
+      is_active: m.id === ACTIVE_MAJOR.id,
+      is_archived: archivedIds.has(m.id),
+      archive_summary: archived.find((a) => a.major_id === m.id) ?? null,
+    }));
+    return res.json(majors);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/major/:id — load archived picks for a past major
+router.get("/major/:id", async (req: Request, res: Response) => {
+  try {
+    const archive = await loadArchive(req.params.id);
+    if (!archive) {
+      return res.status(404).json({ error: "Major not found or not yet archived" });
+    }
+    return res.json(archive);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
 });
