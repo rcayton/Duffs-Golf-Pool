@@ -218,7 +218,7 @@ export default function App() {
         )}
 
         {tab === "charts" && (
-          <WinProbChart poolPlayers={pool_players} />
+          <WinProbChart poolPlayers={pool_players} currentPhase={snapshot.phase} />
         )}
       </main>
     </>

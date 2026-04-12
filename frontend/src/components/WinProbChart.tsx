@@ -102,9 +102,10 @@ function EndDot({ cx, cy, index, dataLength, color, label, playerId }: EndDotPro
 
 interface Props {
   poolPlayers: EnrichedPoolPlayer[];
+  currentPhase: string;
 }
 
-export function WinProbChart({ poolPlayers }: Props) {
+export function WinProbChart({ poolPlayers, currentPhase }: Props) {
   const [rows, setRows] = useState<ChartRow[]>([]);
   const [loading, setLoading] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -118,13 +119,15 @@ export function WinProbChart({ poolPlayers }: Props) {
       const json = await res.json();
       const history: WinProbSnapshot[] = json.history ?? [];
 
-      const chartRows: ChartRow[] = history.map((snap) => {
-        const row: ChartRow = { ts: new Date(snap.captured_at).getTime() };
-        playerIds.forEach((id) => {
-          row[id] = snap.probs[id] ?? 0;
+      const chartRows: ChartRow[] = history
+        .filter((snap) => snap.phase === currentPhase)
+        .map((snap) => {
+          const row: ChartRow = { ts: new Date(snap.captured_at).getTime() };
+          playerIds.forEach((id) => {
+            row[id] = snap.probs[id] ?? 0;
+          });
+          return row;
         });
-        return row;
-      });
 
       setRows(chartRows);
     } catch {
