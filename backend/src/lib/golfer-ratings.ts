@@ -19,10 +19,12 @@ export interface GolferRating {
 // ─── Distribution parameters ──────────────────────────────────────────────────
 // Per-hole mean and std are linear interpolations between anchor points.
 
-const MEAN_AT_100 = -0.160;  // ~-11.5 over 72 holes
-const MEAN_AT_0   = +0.110;  // ~+7.9 over 72 holes
-const STD_AT_100  =  0.78;
-const STD_AT_0    =  1.05;
+// Tuned via grid search against Polymarket R3/R4 checkpoints, Masters 2026.
+// Original defaults: mean100=-0.160, mean0=+0.110, std100=0.78, std0=1.05
+const MEAN_AT_100 = -0.350;  // ~-25.2 over 72 holes (elite player)
+const MEAN_AT_0   = +0.130;  // ~+9.4 over 72 holes  (weakest field player)
+const STD_AT_100  =  0.550;
+const STD_AT_0    =  0.850;
 
 export function ratingToMean(rating: number): number {
   const t = Math.max(0, Math.min(100, rating)) / 100;
