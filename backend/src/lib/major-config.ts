@@ -14,6 +14,7 @@ export interface MajorConfig {
   short_name: string;   // used in header subheader and dropdown
   year: number;
   dates: string;        // display string
+  start_date: string;   // ISO date "YYYY-MM-DD" — used to detect pre-tournament
   source: MajorSource;
   odds_market_key: string;  // The Odds API market key
 }
@@ -25,6 +26,7 @@ export const ALL_MAJORS: MajorConfig[] = [
     short_name: "2026 Masters",
     year: 2026,
     dates: "April 9–12, 2026",
+    start_date: "2026-04-09",
     source: "masters",
     odds_market_key: "golf_masters_tournament_winner",
   },
@@ -34,6 +36,7 @@ export const ALL_MAJORS: MajorConfig[] = [
     short_name: "PGA Championship 2026",
     year: 2026,
     dates: "May 14–17, 2026",
+    start_date: "2026-05-14",
     source: "espn",
     odds_market_key: "golf_pga_championship_winner",
   },

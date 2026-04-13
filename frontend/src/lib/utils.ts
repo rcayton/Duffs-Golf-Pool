@@ -13,7 +13,7 @@ export function scoreClass(score: number): string {
 
 export function phaseLabel(phase: TournamentPhase, round: number): string {
   switch (phase) {
-    case "pre": return "Pre-tournament";
+    case "pre": return "Upcoming";
     case "round1": return "Round 1 in progress";
     case "round2": return "Round 2 in progress";
     case "round3": return "Round 3 in progress";

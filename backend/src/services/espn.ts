@@ -1,5 +1,6 @@
 import axios from "axios";
 import { GolferScore, LeaderboardSnapshot, TournamentPhase } from "../types";
+import { ACTIVE_MAJOR } from "../lib/major-config";
 
 const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/golf/pga";
 const EVENTS_URL = `${ESPN_BASE}/events`;
@@ -61,6 +62,21 @@ function determinePhase(period: number, completed: boolean): TournamentPhase {
 }
 
 export async function fetchLeaderboard(): Promise<LeaderboardSnapshot> {
+  // If today is before the tournament start date, return a pre-tournament snapshot
+  // without hitting ESPN (which would return the last completed event).
+  const todayUtc = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  if (todayUtc < ACTIVE_MAJOR.start_date) {
+    return {
+      tournament_name: ACTIVE_MAJOR.name,
+      phase: "pre",
+      current_round: 0,
+      cut_line: null,
+      projected_cut: null,
+      last_updated: new Date().toISOString(),
+      players: [],
+    };
+  }
+
   const res = await axios.get<EspnEventsResponse>(`${EVENTS_URL}?limit=200`, {
     timeout: 10000,
     headers: {
