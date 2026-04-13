@@ -25,6 +25,7 @@ function fmt(n: number): string {
 export function SelectionLeaderboard({ data }: Props) {
   const { snapshot, pool_players, pot } = data;
   const isComplete = snapshot.phase === "complete";
+  const majorName = snapshot.tournament_name;
 
   // Find tournament winner golfer when complete
   let winnerPoolPlayerId: string | null = null;
@@ -74,7 +75,7 @@ export function SelectionLeaderboard({ data }: Props) {
       money_won: h.money_won + extraWon,
       money_lost: h.money_lost + extraLost,
       win_majors: currentMajorWin
-        ? [...h.win_majors, "Masters 2026"]
+        ? [...h.win_majors, majorName]
         : h.win_majors,
       current_major_win: currentMajorWin,
       rolled_over: rolledOver,
@@ -115,7 +116,7 @@ export function SelectionLeaderboard({ data }: Props) {
           fontSize: 13,
           color: "#6D4C00",
         }}>
-          No pool member's pick won Masters 2026 — pot rolls over to the next major.
+          No pool member's pick won {majorName} — pot rolls over to the next major.
         </div>
       )}
 
@@ -188,7 +189,7 @@ export function SelectionLeaderboard({ data }: Props) {
                             borderRadius: 10, background: bg, color,
                             border: `1px solid ${color}`,
                           }}>
-                            🏆 Masters 2026
+                            🏆 {majorName}
                           </span>
                         )}
                       </div>
