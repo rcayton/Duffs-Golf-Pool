@@ -1,18 +1,20 @@
 import { supabase } from "./supabase";
 import { LeaderboardSnapshot, OddsPlayer, EnrichedPoolPlayer } from "../types";
-import { MajorConfig } from "./major-config";
+import { MajorConfig, ACTIVE_MAJOR } from "./major-config";
 
 const CACHE_TABLE    = "leaderboard_cache";
 const ODDS_TABLE     = "odds_cache";
 const ARCHIVE_TABLE  = "major_archives";
 const HISTORY_TABLE  = "win_prob_history";
-const CACHE_KEY      = "masters_2026";
+
+// Cache key is per-major so switching tournaments doesn't mix snapshots/odds.
+const cacheKey = () => ACTIVE_MAJOR.id;
 
 // ─── Live snapshot cache ───────────────────────────────────────────────────────
 
 export async function saveSnapshot(snapshot: LeaderboardSnapshot): Promise<void> {
   const { error } = await supabase.from(CACHE_TABLE).upsert(
-    { key: CACHE_KEY, data: snapshot, updated_at: new Date().toISOString() },
+    { key: cacheKey(), data: snapshot, updated_at: new Date().toISOString() },
     { onConflict: "key" }
   );
   if (error) console.error("Failed to save snapshot:", error.message);
@@ -20,7 +22,7 @@ export async function saveSnapshot(snapshot: LeaderboardSnapshot): Promise<void>
 
 export async function loadSnapshot(): Promise<LeaderboardSnapshot | null> {
   const { data, error } = await supabase
-    .from(CACHE_TABLE).select("data").eq("key", CACHE_KEY).single();
+    .from(CACHE_TABLE).select("data").eq("key", cacheKey()).single();
   if (error || !data) return null;
   return data.data as LeaderboardSnapshot;
 }
@@ -29,7 +31,7 @@ export async function loadSnapshot(): Promise<LeaderboardSnapshot | null> {
 
 export async function saveOdds(odds: OddsPlayer[]): Promise<void> {
   const { error } = await supabase.from(ODDS_TABLE).upsert(
-    { key: CACHE_KEY, data: odds, updated_at: new Date().toISOString() },
+    { key: cacheKey(), data: odds, updated_at: new Date().toISOString() },
     { onConflict: "key" }
   );
   if (error) console.error("Failed to save odds:", error.message);
@@ -37,7 +39,7 @@ export async function saveOdds(odds: OddsPlayer[]): Promise<void> {
 
 export async function loadOdds(): Promise<OddsPlayer[]> {
   const { data, error } = await supabase
-    .from(ODDS_TABLE).select("data").eq("key", CACHE_KEY).single();
+    .from(ODDS_TABLE).select("data").eq("key", cacheKey()).single();
   if (error || !data) return [];
   return data.data as OddsPlayer[];
 }
