@@ -38,9 +38,10 @@ export function PotBreakdown({ data }: Props) {
           <div style={{ fontSize: 13, fontWeight: 600 }}>Pot breakdown</div>
         </div>
         {[
-          { label: `Masters 2026 dues (${pool_players.length} × $10)`, value: pot.base_dues },
-          { label: "US Open rollover", value: pot.rollover_us_open },
-          { label: "Open Championship rollover", value: pot.rollover_open_championship },
+          { label: `PGA Championship 2026 dues (${pool_players.length} × $10)`, value: pot.base_dues },
+          ...(pot.rollover_total > 0
+            ? [{ label: pot.rollover_label, value: pot.rollover_total }]
+            : []),
           { label: "Cut penalties (missed cuts × $5)", value: pot.cut_penalties_total },
         ].map((row) => (
           <div key={row.label} style={{
@@ -130,7 +131,7 @@ export function PotBreakdown({ data }: Props) {
         border: "1px solid var(--border)",
       }}>
         <strong style={{ color: "var(--text-primary)" }}>Rules:</strong>{" "}
-        Each player contributes $10 for the Masters. $5 is added to the pot for each golfer who misses the cut.
+        Each player contributes $10 for the PGA Championship. $5 is added to the pot for each golfer who misses the cut.
         The player who picked the tournament winner takes the entire pot.
         If no pool member's golfer wins, the pot rolls over to the next major.
       </div>

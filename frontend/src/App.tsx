@@ -18,7 +18,7 @@ export default function App() {
 
   // Major selector state
   const [majors, setMajors] = useState<MajorInfo[]>([]);
-  const [selectedMajorId, setSelectedMajorId] = useState<string>("masters_2026");
+  const [selectedMajorId, setSelectedMajorId] = useState<string>("pga_2026");
   const [archive, setArchive] = useState<MajorArchive | null>(null);
   const [archiveLoading, setArchiveLoading] = useState(false);
 
@@ -34,7 +34,7 @@ export default function App() {
 
   // When a past major is selected, load its archive
   const activeMajor = majors.find((m) => m.is_active);
-  const isViewingLive = selectedMajorId === (activeMajor?.id ?? "masters_2026");
+  const isViewingLive = selectedMajorId === (activeMajor?.id ?? "pga_2026");
 
   useEffect(() => {
     if (isViewingLive) {

@@ -19,13 +19,13 @@ interface ChartRow {
   [playerId: string]: number;
 }
 
-// Masters 2026 round start times (ET = UTC-4)
+// PGA Championship 2026 round start times (ET = UTC-4)
 // Used to draw reference lines and label the X axis by round
 const ROUND_STARTS: { label: string; iso: string }[] = [
-  { label: "R1", iso: "2026-04-09T08:00:00-04:00" },
-  { label: "R2", iso: "2026-04-10T08:00:00-04:00" },
-  { label: "R3", iso: "2026-04-11T08:00:00-04:00" },
-  { label: "R4", iso: "2026-04-12T08:00:00-04:00" },
+  { label: "R1", iso: "2026-05-14T08:00:00-04:00" },
+  { label: "R2", iso: "2026-05-15T08:00:00-04:00" },
+  { label: "R3", iso: "2026-05-16T08:00:00-04:00" },
+  { label: "R4", iso: "2026-05-17T08:00:00-04:00" },
 ];
 
 function formatXTick(ts: number): string {

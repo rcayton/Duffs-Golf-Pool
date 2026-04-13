@@ -116,13 +116,24 @@ export function enrichPoolData(
   snapshot: LeaderboardSnapshot,
   odds: OddsPlayer[]
 ): EnrichedPoolPlayer[] {
-  // Run hole-by-hole Monte Carlo once for the whole field
-  const winProbMap = snapshot.phase !== "pre" && snapshot.phase !== "complete"
-    ? simulateWinProbs(snapshot.players, snapshot.phase, ACTIVE_MAJOR.id)
-    : new Map<string, number>();
+  // Build win probability map:
+  //   complete → winner gets 100%, everyone else 0%
+  //   active rounds → hole-by-hole Monte Carlo
+  //   pre → empty (fall back to FanDuel odds)
+  let winProbMap: Map<string, number>;
+  if (snapshot.phase === "complete") {
+    const winner = snapshot.players.find((p) => p.position === "1");
+    winProbMap = new Map<string, number>();
+    snapshot.players.forEach((p) => {
+      winProbMap.set(p.espn_id, p.espn_id === winner?.espn_id ? 100 : 0);
+    });
+  } else if (snapshot.phase !== "pre") {
+    winProbMap = simulateWinProbs(snapshot.players, snapshot.phase, ACTIVE_MAJOR.id);
+  } else {
+    winProbMap = new Map<string, number>();
+  }
 
-  // Use FanDuel odds as fallback if Monte Carlo produces nothing
-  // (e.g. pre-tournament before any scores exist)
+  // Use Monte Carlo / winner map when populated; fall back to FanDuel for pre-tournament
   const useMonteCarloProbs = winProbMap.size > 0;
 
   return POOL_PLAYERS.map((player) => {
@@ -134,7 +145,8 @@ export function enrichPoolData(
       if (useMonteCarloProbs && score) {
         winProb = winProbMap.get(score.espn_id) ?? 0;
       }
-      if (winProb === 0) {
+      // Don't fall back to FanDuel for completed tournaments — winner map is authoritative
+      if (winProb === 0 && snapshot.phase !== "complete") {
         winProb = findWinProb(pick.golfer_name, odds);
       }
 
@@ -197,22 +209,19 @@ export function enrichPoolData(
 // ─── Pot calculation ───────────────────────────────────────────────────────────
 
 export function calculatePot(poolPlayers: EnrichedPoolPlayer[]): PotSummary {
-  const baseDues = POOL_PLAYERS.length * POT_CONFIG.masters_dues_per_player;
-  const rolloverUsOpen = Object.values(POT_CONFIG.rollovers).reduce(
-    (s, r) => s + r.us_open, 0
-  );
-  const rolloverOpen = Object.values(POT_CONFIG.rollovers).reduce(
-    (s, r) => s + r.open_championship, 0
+  const baseDues = POOL_PLAYERS.length * POT_CONFIG.dues_per_player;
+  const rolloverTotal = Object.values(POT_CONFIG.rollovers).reduce(
+    (s, r) => s + Object.values(r).reduce((a, b) => a + b, 0), 0
   );
   const cutPenalties = poolPlayers.reduce(
     (s, p) => s + p.cut_penalties * POT_CONFIG.cut_penalty, 0
   );
   return {
-    base_dues:                   baseDues,
-    rollover_us_open:            rolloverUsOpen,
-    rollover_open_championship:  rolloverOpen,
-    cut_penalties_total:         cutPenalties,
-    total: baseDues + rolloverUsOpen + rolloverOpen + cutPenalties,
+    base_dues:           baseDues,
+    rollover_total:      rolloverTotal,
+    rollover_label:      "Masters 2026 rollover",
+    cut_penalties_total: cutPenalties,
+    total: baseDues + rolloverTotal + cutPenalties,
   };
 }
 

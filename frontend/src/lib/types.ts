@@ -53,8 +53,8 @@ export interface EnrichedPoolPlayer {
 
 export interface PotSummary {
   base_dues: number;
-  rollover_us_open: number;
-  rollover_open_championship: number;
+  rollover_total: number;        // sum of all prior tournament rollovers
+  rollover_label: string;        // human-readable label e.g. "Masters 2026 rollover"
   cut_penalties_total: number;
   total: number;
 }

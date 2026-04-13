@@ -33,7 +33,7 @@ export const ALL_MAJORS: MajorConfig[] = [
     name: "2026 PGA Championship",
     short_name: "PGA Championship 2026",
     year: 2026,
-    dates: "May 15–18, 2026",
+    dates: "May 14–17, 2026",
     source: "espn",
     odds_market_key: "golf_pga_championship_winner",
   },
@@ -43,7 +43,7 @@ export const ALL_MAJORS: MajorConfig[] = [
 // Change this ID to switch to the next major. Everything else routes
 // automatically based on the MajorConfig above.
 
-export const ACTIVE_MAJOR_ID = "masters_2026";
+export const ACTIVE_MAJOR_ID = "pga_2026";
 
 export const ACTIVE_MAJOR: MajorConfig =
   ALL_MAJORS.find((m) => m.id === ACTIVE_MAJOR_ID) ?? ALL_MAJORS[0];

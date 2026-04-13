@@ -41,7 +41,6 @@ function Metric({ label, value, subtitle }: MetricProps) {
 }
 
 export function PotSummary({ pot, playerCount }: Props) {
-  const rolloverTotal = pot.rollover_us_open + pot.rollover_open_championship;
   const roundContribution = pot.base_dues + pot.cut_penalties_total;
 
   return (
@@ -55,11 +54,13 @@ export function PotSummary({ pot, playerCount }: Props) {
         value={`$${roundContribution}`}
         subtitle={`Buy-in $${pot.base_dues} (${playerCount} × $10) · Cut penalties $${pot.cut_penalties_total}`}
       />
-      <Metric
-        label="Rollovers"
-        value={`$${rolloverTotal}`}
-        subtitle={`US Open $${pot.rollover_us_open} · Open Champ. $${pot.rollover_open_championship}`}
-      />
+      {pot.rollover_total > 0 && (
+        <Metric
+          label="Rollovers"
+          value={`$${pot.rollover_total}`}
+          subtitle={pot.rollover_label}
+        />
+      )}
     </div>
   );
 }

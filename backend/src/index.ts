@@ -105,8 +105,8 @@ async function pollLeaderboard(): Promise<void> {
       `cut=${snapshot.cut_line ?? "n/a"}`
     );
 
-    // Record win probability history during active play (not pre-tournament)
-    if (snapshot.phase !== "pre" && snapshot.phase !== "complete") {
+    // Record win probability history only during active play hours and active rounds
+    if (snapshot.phase !== "pre" && snapshot.phase !== "complete" && isPlayTime()) {
       const odds = await loadOdds();
       const dashboard = buildDashboard(snapshot, odds);
       const probs: Record<string, number> = {};
