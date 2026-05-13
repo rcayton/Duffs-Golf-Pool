@@ -503,7 +503,11 @@ function RoundGroup({ round, picks, field, allPicks, isComplete, onSave }: Round
 
 // ─── Draft (main export) ───────────────────────────────────────────────────────
 
-export function Draft() {
+interface DraftProps {
+  onPicksChanged?: () => void; // called after reset or complete so My Picks refreshes
+}
+
+export function Draft({ onPicksChanged }: DraftProps) {
   const { state, field, loading, error, refresh } = useDraft();
 
   const [lotteryRunning, setLotteryRunning] = useState(false);
@@ -592,7 +596,11 @@ export function Draft() {
     setResetRunning(true);
     try {
       await resetDraftApi();
+      // Clear the animation key so the next lottery plays the animation again
+      localStorage.removeItem(ANIM_KEY);
+      animatedForKey.current = "";
       refresh();
+      onPicksChanged?.();
     } catch (err: any) {
       alert(`Reset failed: ${err.message}`);
     } finally {
@@ -617,6 +625,7 @@ export function Draft() {
       setCompleteError(err);
     } else {
       refresh();
+      onPicksChanged?.();
     }
     setCompleting(false);
   };

@@ -179,7 +179,7 @@ export default function App() {
         <Tabs active={tab} onChange={setTab} />
 
         {tab === "draft" && (
-          <Draft />
+          <Draft onPicksChanged={refresh} />
         )}
 
         {tab === "picks" && (
