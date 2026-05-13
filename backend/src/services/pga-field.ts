@@ -1,53 +1,15 @@
-import axios from "axios";
-import { ACTIVE_MAJOR } from "../lib/major-config";
-
 // ─── PGA field fetcher ─────────────────────────────────────────────────────────
-// Primary: ESPN events endpoint (same one espn.ts uses for scores).
-// The competitors[] array IS the field — every entrant appears even pre-tournament.
-// Fallback: hardcoded 2026 PGA Championship field (used when ESPN returns empty
-// or the tournament hasn't been seeded into the events feed yet).
+// Uses the official 2026 PGA Championship entry list for draft validation.
 
 export interface FieldPlayer {
   espn_id: string;
-  name: string;       // "Scottie Scheffler"
+  name: string;
 }
 
-// Cache: re-fetch at most once per hour per process lifetime.
 let fieldCache: FieldPlayer[] | null = null;
-let fieldCachedAt = 0;
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export async function fetchPgaField(): Promise<FieldPlayer[]> {
-  if (fieldCache && Date.now() - fieldCachedAt < CACHE_TTL_MS) {
-    return fieldCache;
-  }
-
-  try {
-    const ESPN_EVENTS_URL =
-      "https://site.api.espn.com/apis/site/v2/sports/golf/pga/events?limit=200";
-
-    const res = await axios.get<any>(ESPN_EVENTS_URL, {
-      timeout: 10000,
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; DuffsPool/1.0)" },
-    });
-
-    const event = res.data?.events?.[0];
-    const competitors: any[] = event?.competitors ?? [];
-
-    if (competitors.length > 0) {
-      const field: FieldPlayer[] = competitors
-        .filter((c) => c.id && c.displayName)
-        .map((c) => ({ espn_id: String(c.id), name: c.displayName as string }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-      fieldCache = field;
-      fieldCachedAt = Date.now();
-      console.log(`[pga-field] Fetched ${field.length} players from ESPN for ${ACTIVE_MAJOR.short_name}`);
-      return field;
-    }
-  } catch (err: any) {
-    console.warn("[pga-field] ESPN fetch failed:", err.message, "— using fallback field");
-  }
+  if (fieldCache) return fieldCache;
 
   // ─── Fallback: 2026 PGA Championship official field ──────────────────────────
   const fallback: FieldPlayer[] = [
@@ -208,12 +170,10 @@ export async function fetchPgaField(): Promise<FieldPlayer[]> {
   ].sort((a, b) => a.name.localeCompare(b.name));
 
   fieldCache = fallback;
-  fieldCachedAt = Date.now();
   return fallback;
 }
 
-/** Clear the in-process field cache (called on draft reset so next pick sees fresh data). */
+/** Clear the in-process field cache (called on draft reset). */
 export function clearFieldCache(): void {
   fieldCache = null;
-  fieldCachedAt = 0;
 }
