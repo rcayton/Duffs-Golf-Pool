@@ -23,6 +23,8 @@ function roundLabel(round: number): string {
 
 // ─── LotterySection ────────────────────────────────────────────────────────────
 
+type AnimPhase = "idle" | "countdown" | "revealing";
+
 interface LotterySectionProps {
   draftOrder: string[];
   playerNames: Record<string, string>;
@@ -31,7 +33,24 @@ interface LotterySectionProps {
   onReset: () => void;
   lotteryRunning: boolean;
   resetRunning: boolean;
+  animPhase: AnimPhase;
+  animCountdown: number;
+  animRevealedCount: number;
+  animOrder: string[];
 }
+
+const LOTTERY_KEYFRAMES = `
+  @keyframes countPop {
+    0%   { transform: scale(0.3); opacity: 0; }
+    55%  { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1);   opacity: 1; }
+  }
+  @keyframes pickReveal {
+    0%   { opacity: 0; transform: translateY(-16px) scale(0.8); }
+    65%  { transform: translateY(3px) scale(1.06); opacity: 1; }
+    100% { transform: translateY(0)   scale(1);    opacity: 1; }
+  }
+`;
 
 function LotterySection({
   draftOrder,
@@ -41,7 +60,16 @@ function LotterySection({
   onReset,
   lotteryRunning,
   resetRunning,
+  animPhase,
+  animCountdown,
+  animRevealedCount,
+  animOrder,
 }: LotterySectionProps) {
+  const isAnimating = animPhase === "countdown" || animPhase === "revealing";
+  // Which order to use for display: animOrder during animation, draftOrder otherwise
+  const displayOrder = isAnimating ? animOrder : draftOrder;
+  const n = displayOrder.length;
+
   return (
     <div style={{
       background: "var(--bg-card)",
@@ -51,20 +79,26 @@ function LotterySection({
       marginBottom: "1.5rem",
       boxShadow: "var(--shadow-card)",
     }}>
+      <style>{LOTTERY_KEYFRAMES}</style>
+
       <div style={{
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         flexWrap: "wrap",
         gap: 12,
-        marginBottom: draftOrder.length > 0 ? "1rem" : 0,
+        marginBottom: (displayOrder.length > 0 || isAnimating) ? "1rem" : 0,
       }}>
         <div>
           <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
             Draft Lottery
           </h2>
           <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "2px 0 0" }}>
-            {status === "idle"
+            {isAnimating
+              ? animPhase === "countdown"
+                ? "Randomizing draft order…"
+                : "Revealing picks…"
+              : status === "idle"
               ? "Press Start Lottery to randomly set the draft order."
               : status === "complete"
               ? "Draft complete — picks are locked in."
@@ -72,78 +106,120 @@ function LotterySection({
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: 8 }}>
-          {status === "idle" && (
-            <button
-              onClick={onStartLottery}
-              disabled={lotteryRunning}
-              style={{
-                padding: "8px 20px",
-                background: lotteryRunning ? "var(--bg-surface-2)" : "var(--masters-green)",
-                color: lotteryRunning ? "var(--text-secondary)" : "#fff",
-                border: "none",
-                borderRadius: "var(--radius-md)",
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: lotteryRunning ? "not-allowed" : "pointer",
-                transition: "background 0.2s",
-              }}
-            >
-              {lotteryRunning ? "Running…" : "🎲 Start Lottery"}
-            </button>
-          )}
+        {!isAnimating && (
+          <div style={{ display: "flex", gap: 8 }}>
+            {status === "idle" && (
+              <button
+                onClick={onStartLottery}
+                disabled={lotteryRunning}
+                style={{
+                  padding: "8px 20px",
+                  background: lotteryRunning ? "var(--bg-surface-2)" : "var(--masters-green)",
+                  color: lotteryRunning ? "var(--text-secondary)" : "#fff",
+                  border: "none",
+                  borderRadius: "var(--radius-md)",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: lotteryRunning ? "not-allowed" : "pointer",
+                  transition: "background 0.2s",
+                }}
+              >
+                {lotteryRunning ? "Running…" : "🎲 Start Lottery"}
+              </button>
+            )}
 
-          {status !== "idle" && (
-            <button
-              onClick={onReset}
-              disabled={resetRunning}
-              style={{
-                padding: "8px 16px",
-                background: "transparent",
-                color: "#A32D2D",
-                border: "1px solid #A32D2D",
-                borderRadius: "var(--radius-md)",
-                fontSize: 13,
-                fontWeight: 500,
-                cursor: resetRunning ? "not-allowed" : "pointer",
-                opacity: resetRunning ? 0.6 : 1,
-              }}
-            >
-              {resetRunning ? "Resetting…" : "↺ Reset Draft"}
-            </button>
-          )}
-        </div>
+            {status !== "idle" && (
+              <button
+                onClick={onReset}
+                disabled={resetRunning}
+                style={{
+                  padding: "8px 16px",
+                  background: "transparent",
+                  color: "#A32D2D",
+                  border: "1px solid #A32D2D",
+                  borderRadius: "var(--radius-md)",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: resetRunning ? "not-allowed" : "pointer",
+                  opacity: resetRunning ? 0.6 : 1,
+                }}
+              >
+                {resetRunning ? "Resetting…" : "↺ Reset Draft"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {draftOrder.length > 0 && (
+      {/* ── Countdown ── */}
+      {animPhase === "countdown" && (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "1.5rem 0",
+        }}>
+          <span
+            key={animCountdown}
+            style={{
+              fontSize: 96,
+              fontWeight: 800,
+              color: "var(--masters-green)",
+              lineHeight: 1,
+              animation: "countPop 0.7s cubic-bezier(0.22,1,0.36,1) forwards",
+              display: "inline-block",
+            }}
+          >
+            {animCountdown}
+          </span>
+        </div>
+      )}
+
+      {/* ── Revealing picks (right → left, i.e. pick 7 first) ── */}
+      {(animPhase === "revealing" || (animPhase === "idle" && displayOrder.length > 0)) && (
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-tertiary)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <div style={{
+            fontSize: 12, fontWeight: 600, color: "var(--text-tertiary)",
+            marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em",
+          }}>
             Draft Order
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {draftOrder.map((playerId, idx) => {
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {displayOrder.map((playerId, idx) => {
               const color = PLAYER_COLORS[playerId] ?? "#5a5a55";
               const bg    = PLAYER_BG_COLORS[playerId] ?? "#F1EFE8";
+              // Chip at idx is revealed when (n - 1 - idx) < animRevealedCount
+              // i.e. last chip (idx = n-1) revealed first (count = 1)
+              const isRevealed = animPhase === "idle" || (n - 1 - idx) < animRevealedCount;
+
+              if (!isRevealed) return null;
+
               return (
-                <div key={playerId} style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "4px 10px 4px 6px",
-                  background: bg,
-                  border: `1px solid ${color}22`,
-                  borderRadius: 20,
-                  fontSize: 13,
-                }}>
+                <div
+                  key={playerId}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "6px 12px 6px 6px",
+                    background: bg,
+                    border: `1px solid ${color}33`,
+                    borderRadius: 24,
+                    fontSize: 14,
+                    animation: animPhase === "revealing"
+                      ? "pickReveal 0.45s cubic-bezier(0.22,1,0.36,1) forwards"
+                      : "none",
+                  }}
+                >
                   <span style={{
-                    width: 20, height: 20, borderRadius: "50%",
+                    width: 24, height: 24, borderRadius: "50%",
                     background: color, color: "#fff",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 11, fontWeight: 700, flexShrink: 0,
+                    fontSize: 12, fontWeight: 700, flexShrink: 0,
                   }}>
                     {idx + 1}
                   </span>
-                  <span style={{ fontWeight: 500, color: "var(--text-primary)" }}>
+                  <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
                     {playerNames[playerId] ?? playerId}
                   </span>
                 </div>
@@ -404,13 +480,49 @@ export function Draft() {
   const [completing,     setCompleting]     = useState(false);
   const [completeError,  setCompleteError]  = useState<string | null>(null);
 
+  // Animation state for the lottery reveal
+  const [animPhase,        setAnimPhase]        = useState<AnimPhase>("idle");
+  const [animCountdown,    setAnimCountdown]    = useState(5);
+  const [animRevealedCount, setAnimRevealedCount] = useState(0);
+  const [animOrder,        setAnimOrder]        = useState<string[]>([]);
+
   const handleStartLottery = async () => {
     setLotteryRunning(true);
     setLotteryError(null);
     try {
-      await startLottery();
-      refresh();
+      const newState = await startLottery();
+      const order = newState.draft_order;
+
+      // Kick off countdown
+      setAnimOrder(order);
+      setAnimPhase("countdown");
+      setAnimCountdown(5);
+      setAnimRevealedCount(0);
+
+      // Tick down 5 → 1, then reveal picks right-to-left
+      let count = 5;
+      const countInterval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          setAnimCountdown(count);
+        } else {
+          clearInterval(countInterval);
+          setAnimPhase("revealing");
+          let revealed = 0;
+          const revealInterval = setInterval(() => {
+            revealed++;
+            setAnimRevealedCount(revealed);
+            if (revealed >= order.length) {
+              clearInterval(revealInterval);
+              setAnimPhase("idle");
+              refresh();
+            }
+          }, 550);
+        }
+      }, 1000);
+
     } catch (err: any) {
+      setAnimPhase("idle");
       setLotteryError(err.message ?? "Failed to start lottery.");
     } finally {
       setLotteryRunning(false);
@@ -502,6 +614,10 @@ export function Draft() {
         onReset={handleReset}
         lotteryRunning={lotteryRunning}
         resetRunning={resetRunning}
+        animPhase={animPhase}
+        animCountdown={animCountdown}
+        animRevealedCount={animRevealedCount}
+        animOrder={animOrder}
       />
 
       {lotteryError && (
@@ -514,8 +630,8 @@ export function Draft() {
         </div>
       )}
 
-      {/* Draft table — only shown once lottery has run */}
-      {status !== "idle" && picks.length > 0 && (
+      {/* Draft table — only shown once lottery has run and animation is done */}
+      {status !== "idle" && picks.length > 0 && animPhase === "idle" && (
         <>
           <div style={{
             background: "var(--bg-card)",
