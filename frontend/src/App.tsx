@@ -8,6 +8,7 @@ import { PotBreakdown } from "./components/PotBreakdown";
 import { SelectionLeaderboard } from "./components/SelectionLeaderboard";
 import { ArchivedPicks } from "./components/ArchivedPicks";
 import { WinProbChart } from "./components/WinProbChart";
+import { Draft } from "./components/Draft";
 import { Tabs, TabId } from "./components/Tabs";
 import { fetchMajors, fetchMajorArchive } from "./lib/api";
 import { MajorInfo, MajorArchive } from "./lib/types";
@@ -176,6 +177,10 @@ export default function App() {
       <main style={{ maxWidth: 1100, margin: "0 auto", padding: "1.25rem 1rem 3rem" }}>
         <PotSummary pot={pot} playerCount={pool_players.length} />
         <Tabs active={tab} onChange={setTab} />
+
+        {tab === "draft" && (
+          <Draft />
+        )}
 
         {tab === "picks" && (
           <div style={{

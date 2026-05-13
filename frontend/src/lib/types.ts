@@ -103,3 +103,25 @@ export interface MajorArchive {
   winner_id: string | null;
   archived_at: string;
 }
+
+// ─── Draft types ───────────────────────────────────────────────────────────────
+
+export type DraftStatus = "idle" | "in_progress" | "complete";
+
+export interface DraftPickRecord {
+  pick_number: number;        // 1–28
+  round:       1 | 2 | 3 | 4;
+  draft_slot:  number;        // 1–7 within the round
+  player_id:   string;
+  player_name: string;
+  golfer_name: string | null; // null = not yet filled
+}
+
+export interface DraftState {
+  major_id:     string;
+  status:       DraftStatus;
+  draft_order:  string[];         // player_ids in lottery order
+  picks:        DraftPickRecord[];
+  completed_at: string | null;
+  updated_at:   string;
+}

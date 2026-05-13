@@ -5,9 +5,11 @@ import {
   GolferScore,
   LeaderboardSnapshot,
   OddsPlayer,
+  PoolPlayer,
   PotSummary,
 } from "../types";
 import { POOL_PLAYERS, POT_CONFIG } from "./pool-config";
+import { loadPoolPlayers } from "./pool-picks";
 import { simulateWinProbs } from "./golf-simulator";
 import { ACTIVE_MAJOR } from "./major-config";
 
@@ -114,7 +116,8 @@ function estimateCutProb(
 
 export function enrichPoolData(
   snapshot: LeaderboardSnapshot,
-  odds: OddsPlayer[]
+  odds: OddsPlayer[],
+  poolPlayers: PoolPlayer[]
 ): EnrichedPoolPlayer[] {
   // Build win probability map:
   //   complete → winner gets 100%, everyone else 0%
@@ -136,7 +139,7 @@ export function enrichPoolData(
   // Use Monte Carlo / winner map when populated; fall back to FanDuel for pre-tournament
   const useMonteCarloProbs = winProbMap.size > 0;
 
-  return POOL_PLAYERS.map((player) => {
+  return poolPlayers.map((player) => {
     const enrichedPicks: EnrichedPick[] = player.picks.map((pick) => {
       const score   = findGolferScore(pick.golfer_name, snapshot.players);
 
@@ -209,7 +212,7 @@ export function enrichPoolData(
 // ─── Pot calculation ───────────────────────────────────────────────────────────
 
 export function calculatePot(poolPlayers: EnrichedPoolPlayer[]): PotSummary {
-  const baseDues = POOL_PLAYERS.length * POT_CONFIG.dues_per_player;
+  const baseDues = poolPlayers.length * POT_CONFIG.dues_per_player;
   const rolloverTotal = Object.values(POT_CONFIG.rollovers).reduce(
     (s, r) => s + Object.values(r).reduce((a, b) => a + b, 0), 0
   );
@@ -227,11 +230,13 @@ export function calculatePot(poolPlayers: EnrichedPoolPlayer[]): PotSummary {
 
 // ─── Dashboard assembly ────────────────────────────────────────────────────────
 
-export function buildDashboard(
+export async function buildDashboard(
   snapshot: LeaderboardSnapshot,
   odds: OddsPlayer[]
-): DashboardData {
-  const poolPlayers = enrichPoolData(snapshot, odds);
+): Promise<DashboardData> {
+  // Load picks from Supabase (falls back to TBD if draft not yet complete)
+  const poolPlayersWithPicks = await loadPoolPlayers();
+  const poolPlayers = enrichPoolData(snapshot, odds, poolPlayersWithPicks);
   const pot         = calculatePot(poolPlayers);
 
   // Luckiest award: highest luck_score after cut is final (round 3+)
