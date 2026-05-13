@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useDraft } from "../hooks/useDraft";
 import { DraftPickRecord } from "../lib/types";
 import { startLottery, submitPick, completeDraftApi, resetDraftApi } from "../lib/api";
@@ -246,38 +246,56 @@ function PickRow({ pick, field, pickedNames, isComplete, onSave }: PickRowProps)
   const color = PLAYER_COLORS[pick.player_id] ?? "#5a5a55";
   const bg    = PLAYER_BG_COLORS[pick.player_id] ?? "#F1EFE8";
 
-  const [inputVal, setInputVal]   = useState(pick.golfer_name ?? "");
-  const [saving, setSaving]       = useState(false);
-  const [rowError, setRowError]   = useState<string | null>(null);
-  const [dirty, setDirty]         = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [inputVal, setInputVal] = useState(pick.golfer_name ?? "");
+  const [saving, setSaving]     = useState(false);
+  const [rowError, setRowError] = useState<string | null>(null);
+  const [dirty, setDirty]       = useState(false);
+  const [showDrop, setShowDrop] = useState(false);
+  const [hlIdx, setHlIdx]       = useState(0);
+  const inputRef    = useRef<HTMLInputElement>(null);
+  const mouseDownRef = useRef(false); // true while pointer is held on a suggestion
 
-  // Sync inputVal if the pick changes externally (another user filled it)
   useEffect(() => {
-    if (!dirty) {
-      setInputVal(pick.golfer_name ?? "");
-    }
+    if (!dirty) setInputVal(pick.golfer_name ?? "");
   }, [pick.golfer_name, dirty]);
 
+  // Filtered suggestions — min 1 char, max 8 results
+  const suggestions = useMemo(() => {
+    const q = normalizeName(inputVal);
+    if (q.length < 1) return [];
+    return field
+      .filter(n => {
+        const nn = normalizeName(n);
+        return nn.includes(q) && nn !== normalizeName(pick.golfer_name ?? "") && !pickedNames.has(nn);
+      })
+      .slice(0, 8);
+  }, [inputVal, field, pickedNames, pick.golfer_name]);
+
+  const handleSelect = useCallback(async (name: string) => {
+    mouseDownRef.current = false;
+    setInputVal(name);
+    setDirty(false);
+    setShowDrop(false);
+    setRowError(null);
+    setSaving(true);
+    const err = await onSave(pick.pick_number, name);
+    setSaving(false);
+    setRowError(err);
+  }, [pick.pick_number, onSave]);
+
   const handleBlur = useCallback(async () => {
+    // If the user is clicking a suggestion, skip blur save — handleSelect fires instead
+    if (mouseDownRef.current) return;
+    setShowDrop(false);
     if (!dirty) return;
     const trimmed = inputVal.trim();
-
-    // If field cleared, save empty
     if (trimmed === "" && pick.golfer_name !== null) {
       setSaving(true);
       const err = await onSave(pick.pick_number, "");
-      setSaving(false);
-      setRowError(err);
-      setDirty(false);
+      setSaving(false); setRowError(err); setDirty(false);
       return;
     }
-
-    if (trimmed === "") {
-      setDirty(false);
-      return;
-    }
-
+    if (trimmed === "") { setDirty(false); return; }
     setSaving(true);
     const err = await onSave(pick.pick_number, trimmed);
     setSaving(false);
@@ -286,27 +304,18 @@ function PickRow({ pick, field, pickedNames, isComplete, onSave }: PickRowProps)
   }, [dirty, inputVal, pick.golfer_name, pick.pick_number, onSave]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      inputRef.current?.blur();
-    }
+    if (e.key === "ArrowDown")  { e.preventDefault(); setHlIdx(i => Math.min(i + 1, suggestions.length - 1)); }
+    else if (e.key === "ArrowUp")   { e.preventDefault(); setHlIdx(i => Math.max(i - 1, 0)); }
+    else if (e.key === "Enter" && showDrop && suggestions[hlIdx]) { e.preventDefault(); handleSelect(suggestions[hlIdx]); }
+    else if (e.key === "Enter")     { e.preventDefault(); inputRef.current?.blur(); }
+    else if (e.key === "Escape")    { setShowDrop(false); }
   };
 
-  // Client-side duplicate check for immediate red outline feedback
-  const normInput = normalizeName(inputVal);
-  const isDuplicate =
-    inputVal.trim().length > 3 &&
-    pickedNames.has(normInput) &&
-    normInput !== normalizeName(pick.golfer_name ?? "");
-
-  const isFilled   = !!pick.golfer_name;
-  const isEditable = !isComplete;
-
-  const borderColor = rowError || isDuplicate
-    ? "#A32D2D"
-    : isFilled
-    ? color
-    : "var(--border-strong)";
+  const normInput   = normalizeName(inputVal);
+  const isDuplicate = inputVal.trim().length > 3 && pickedNames.has(normInput) && normInput !== normalizeName(pick.golfer_name ?? "");
+  const isFilled    = !!pick.golfer_name;
+  const isEditable  = !isComplete;
+  const borderColor = rowError || isDuplicate ? "#A32D2D" : isFilled ? color : "var(--border-strong)";
 
   return (
     <tr style={{ borderBottom: "1px solid var(--border)" }}>
@@ -323,25 +332,17 @@ function PickRow({ pick, field, pickedNames, isComplete, onSave }: PickRowProps)
       {/* Participant */}
       <td style={{ padding: "8px 10px" }}>
         <div style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "2px 8px 2px 4px",
-          background: bg,
-          borderRadius: 12,
-          fontSize: 13,
+          display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "2px 8px 2px 4px", background: bg, borderRadius: 12, fontSize: 13,
         }}>
           <span style={{
-            width: 18, height: 18, borderRadius: "50%",
-            background: color, color: "#fff",
+            width: 18, height: 18, borderRadius: "50%", background: color, color: "#fff",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 10, fontWeight: 700, flexShrink: 0,
           }}>
             {pick.draft_slot}
           </span>
-          <span style={{ fontWeight: 500, color: "var(--text-primary)" }}>
-            {pick.player_name}
-          </span>
+          <span style={{ fontWeight: 500, color: "var(--text-primary)" }}>{pick.player_name}</span>
         </div>
       </td>
 
@@ -350,21 +351,24 @@ function PickRow({ pick, field, pickedNames, isComplete, onSave }: PickRowProps)
         <div style={{ position: "relative" }}>
           <input
             ref={inputRef}
-            list={`field-list-${pick.pick_number}`}
             value={inputVal}
             disabled={!isEditable || saving}
             onChange={(e) => {
               setInputVal(e.target.value);
               setDirty(true);
               setRowError(null);
+              setShowDrop(true);
+              setHlIdx(0);
             }}
+            onFocus={() => { setShowDrop(true); setHlIdx(0); }}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            placeholder={isComplete ? "—" : "Start typing a name…"}
+            placeholder={isComplete ? "—" : "Type a name…"}
+            autoComplete="off"
             style={{
               width: "100%",
-              padding: "5px 8px",
-              fontSize: 13,
+              padding: "8px 10px",
+              fontSize: 16, // 16px prevents iOS auto-zoom
               border: `1.5px solid ${borderColor}`,
               borderRadius: "var(--radius-sm)",
               background: isComplete ? "var(--bg-surface)" : "var(--bg-card)",
@@ -372,26 +376,54 @@ function PickRow({ pick, field, pickedNames, isComplete, onSave }: PickRowProps)
               outline: "none",
               cursor: isComplete ? "default" : "text",
               transition: "border-color 0.15s",
+              boxSizing: "border-box",
             }}
           />
           {saving && (
             <span style={{
               position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
-              fontSize: 11, color: "var(--text-tertiary)",
-            }}>
-              saving…
-            </span>
+              fontSize: 11, color: "var(--text-tertiary)", pointerEvents: "none",
+            }}>saving…</span>
           )}
-          <datalist id={`field-list-${pick.pick_number}`}>
-            {field
-              .filter((name) => {
-                const n = normalizeName(name);
-                return n !== normalizeName(pick.golfer_name ?? "") && !pickedNames.has(n);
-              })
-              .map((name) => (
-                <option key={name} value={name} />
+
+          {/* Custom dropdown — replaces <datalist> for reliable mobile support */}
+          {showDrop && suggestions.length > 0 && (
+            <div style={{
+              position: "absolute", top: "100%", left: 0, right: 0, zIndex: 1000,
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-strong)",
+              borderRadius: "var(--radius-md)",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+              marginTop: 2,
+              maxHeight: 300,
+              overflowY: "auto",
+              WebkitOverflowScrolling: "touch",
+            }}>
+              {suggestions.map((name, i) => (
+                <div
+                  key={name}
+                  onMouseDown={() => { mouseDownRef.current = true; }}
+                  onMouseUp={() => handleSelect(name)}
+                  onTouchStart={() => { mouseDownRef.current = true; }}
+                  onTouchEnd={(e) => { e.preventDefault(); handleSelect(name); }}
+                  style={{
+                    padding: "12px 14px",
+                    fontSize: 15,
+                    minHeight: 44,
+                    display: "flex",
+                    alignItems: "center",
+                    background: i === hlIdx ? "var(--bg-surface-2)" : "transparent",
+                    cursor: "pointer",
+                    color: "var(--text-primary)",
+                    borderBottom: i < suggestions.length - 1 ? "1px solid var(--border)" : "none",
+                  }}
+                  onMouseEnter={() => setHlIdx(i)}
+                >
+                  {name}
+                </div>
               ))}
-          </datalist>
+            </div>
+          )}
         </div>
 
         {/* Inline error */}
@@ -481,48 +513,70 @@ export function Draft() {
   const [completeError,  setCompleteError]  = useState<string | null>(null);
 
   // Animation state for the lottery reveal
-  const [animPhase,        setAnimPhase]        = useState<AnimPhase>("idle");
-  const [animCountdown,    setAnimCountdown]    = useState(5);
+  const [animPhase,         setAnimPhase]         = useState<AnimPhase>("idle");
+  const [animCountdown,     setAnimCountdown]     = useState(5);
   const [animRevealedCount, setAnimRevealedCount] = useState(0);
-  const [animOrder,        setAnimOrder]        = useState<string[]>([]);
+  const [animOrder,         setAnimOrder]         = useState<string[]>([]);
+
+  // Track which draft order we've already animated so we never double-play
+  const animatedForKey = useRef<string>("");
+
+  const runAnimation = useCallback((order: string[]) => {
+    setAnimOrder(order);
+    setAnimPhase("countdown");
+    setAnimCountdown(5);
+    setAnimRevealedCount(0);
+
+    let count = 5;
+    const countInterval = setInterval(() => {
+      count--;
+      if (count > 0) {
+        setAnimCountdown(count);
+      } else {
+        clearInterval(countInterval);
+        setAnimPhase("revealing");
+        let revealed = 0;
+        const revealInterval = setInterval(() => {
+          revealed++;
+          setAnimRevealedCount(revealed);
+          if (revealed >= order.length) {
+            clearInterval(revealInterval);
+            setAnimPhase("idle");
+            refresh();
+          }
+        }, 3000);
+      }
+    }, 1000);
+  }, [refresh]);
+
+  // Global animation trigger — fires for ALL clients when a new lottery result arrives.
+  // Uses draft_order as the unique key (changes only when lottery runs).
+  // Animates if the result is < 35 seconds old (5s countdown + 7×3s reveals + buffer).
+  useEffect(() => {
+    if (!state || state.draft_order.length === 0) return;
+    const key = state.draft_order.join(",");
+    if (animatedForKey.current === key) return;          // already played this run
+    if (animPhase !== "idle") return;                    // animation already in progress
+
+    const ageMs = Date.now() - new Date(state.updated_at).getTime();
+    if (ageMs > 35_000) {
+      animatedForKey.current = key;                      // too old — mark seen, skip
+      return;
+    }
+
+    animatedForKey.current = key;
+    runAnimation(state.draft_order);
+  }, [state?.draft_order.join(","), state?.updated_at]);  // eslint-disable-line
 
   const handleStartLottery = async () => {
     setLotteryRunning(true);
     setLotteryError(null);
     try {
-      const newState = await startLottery();
-      const order = newState.draft_order;
-
-      // Kick off countdown
-      setAnimOrder(order);
-      setAnimPhase("countdown");
-      setAnimCountdown(5);
-      setAnimRevealedCount(0);
-
-      // Tick down 5 → 1, then reveal picks right-to-left
-      let count = 5;
-      const countInterval = setInterval(() => {
-        count--;
-        if (count > 0) {
-          setAnimCountdown(count);
-        } else {
-          clearInterval(countInterval);
-          setAnimPhase("revealing");
-          let revealed = 0;
-          const revealInterval = setInterval(() => {
-            revealed++;
-            setAnimRevealedCount(revealed);
-            if (revealed >= order.length) {
-              clearInterval(revealInterval);
-              setAnimPhase("idle");
-              refresh();
-            }
-          }, 3000);
-        }
-      }, 1000);
-
+      await startLottery();
+      // Animation is triggered by the useEffect above when the polled state updates.
+      // refresh() is called here so the poll sees the new state quickly.
+      refresh();
     } catch (err: any) {
-      setAnimPhase("idle");
       setLotteryError(err.message ?? "Failed to start lottery.");
     } finally {
       setLotteryRunning(false);
