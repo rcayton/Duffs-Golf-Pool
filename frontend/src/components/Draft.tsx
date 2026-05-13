@@ -518,8 +518,10 @@ export function Draft() {
   const [animRevealedCount, setAnimRevealedCount] = useState(0);
   const [animOrder,         setAnimOrder]         = useState<string[]>([]);
 
-  // Track which draft order we've already animated so we never double-play
-  const animatedForKey = useRef<string>("");
+  // Track which draft order we've already animated — persisted in localStorage
+  // so navigating away and back doesn't replay the animation.
+  const ANIM_KEY = "duffs_animated_draft_key";
+  const animatedForKey = useRef<string>(localStorage.getItem(ANIM_KEY) ?? "");
 
   const runAnimation = useCallback((order: string[]) => {
     setAnimOrder(order);
@@ -560,11 +562,13 @@ export function Draft() {
 
     const ageMs = Date.now() - new Date(state.updated_at).getTime();
     if (ageMs > 35_000) {
-      animatedForKey.current = key;                      // too old — mark seen, skip
+      animatedForKey.current = key;
+      localStorage.setItem(ANIM_KEY, key);               // too old — mark seen, skip
       return;
     }
 
     animatedForKey.current = key;
+    localStorage.setItem(ANIM_KEY, key);
     runAnimation(state.draft_order);
   }, [state?.draft_order.join(","), state?.updated_at]);  // eslint-disable-line
 
