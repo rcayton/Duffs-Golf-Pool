@@ -66,7 +66,7 @@ async function maybeArchive(snapshot: LeaderboardSnapshot): Promise<void> {
   console.log(`[${new Date().toISOString()}] Tournament complete — archiving ${ACTIVE_MAJOR.id}...`);
   try {
     const odds = await loadOdds();
-    const dashboard = buildDashboard(snapshot, odds);
+    const dashboard = await buildDashboard(snapshot, odds);
     const { pool_players, pot } = dashboard;
 
     // Determine winning pool player (if any pick matches the tournament winner)
@@ -108,7 +108,7 @@ async function pollLeaderboard(): Promise<void> {
     // Record win probability history only during active play hours and active rounds
     if (snapshot.phase !== "pre" && snapshot.phase !== "complete" && isPlayTime()) {
       const odds = await loadOdds();
-      const dashboard = buildDashboard(snapshot, odds);
+      const dashboard = await buildDashboard(snapshot, odds);
       const probs: Record<string, number> = {};
       dashboard.pool_players.forEach((p) => { probs[p.id] = p.combined_win_odds; });
       await saveWinProbSnapshot(ACTIVE_MAJOR.id, snapshot.phase, probs);
