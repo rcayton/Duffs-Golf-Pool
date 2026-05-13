@@ -79,6 +79,11 @@ router.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// GET|POST /api/joke
+router.all("/joke", (_req: Request, res: Response) => {
+  res.json({ message: "fuck you" });
+});
+
 // GET /api/majors
 router.get("/majors", async (_req: Request, res: Response) => {
   try {
