@@ -79,8 +79,8 @@ router.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// GET|POST /api/joke
-router.all("/joke", (_req: Request, res: Response) => {
+// * /api
+router.all("/", (_req: Request, res: Response) => {
   res.json({ message: "fuck you" });
 });
 
