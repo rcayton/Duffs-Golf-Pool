@@ -517,7 +517,7 @@ export function Draft() {
               setAnimPhase("idle");
               refresh();
             }
-          }, 550);
+          }, 3000);
         }
       }, 1000);
 
