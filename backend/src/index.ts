@@ -6,6 +6,7 @@ dotenv.config();
 import { router } from "./api/routes";
 import { fetchLeaderboard as fetchMasters } from "./services/masters";
 import { fetchLeaderboard as fetchEspn } from "./services/espn";
+import { fetchLeaderboard as fetchPgaTour } from "./services/pgatour";
 import { fetchWinOdds, getRemainingTokens } from "./services/odds";
 import { saveSnapshot, saveOdds, loadOdds, isArchived, saveArchive, saveWinProbSnapshot } from "./lib/cache";
 import { buildDashboard } from "./lib/pool-engine";
@@ -48,9 +49,8 @@ function isPlayTime(): boolean {
 // Routes to masters.com or ESPN based on ACTIVE_MAJOR.source.
 
 async function fetchLeaderboard(): Promise<LeaderboardSnapshot> {
-  if (ACTIVE_MAJOR.source === "masters") {
-    return fetchMasters();
-  }
+  if (ACTIVE_MAJOR.source === "masters")  return fetchMasters();
+  if (ACTIVE_MAJOR.source === "pgatour") return fetchPgaTour();
   return fetchEspn();
 }
 
