@@ -229,6 +229,8 @@ export default function App() {
             poolPlayers={pool_players}
             cutLine={snapshot.cut_line}
             projectedCut={snapshot.projected_cut}
+            phase={snapshot.phase}
+            currentRound={snapshot.current_round}
           />
         )}
 
