@@ -123,37 +123,33 @@ export async function fetchWinOdds(): Promise<OddsPlayer[]> {
     return [];
   }
 
-  const winnerMarket = ACTIVE_MAJOR.odds_market_key;
-  // Derive cut market key from winner market key (e.g. _winner → _make_cut)
-  const cutMarket = winnerMarket.replace("_winner", "_make_cut");
-  // Try the event-specific sport key first (golf_pga_championship), fall back to generic "golf"
-  const sportKeys = [winnerMarket.replace("_winner", ""), "golf"];
+  // On the-odds-api.com, golf outrights use the full market key as the sport key.
+  // e.g. "golf_pga_championship_winner" is BOTH the sport key and the identifier.
+  // The market parameter within that sport is always "outrights".
+  const sportKey   = ACTIVE_MAJOR.odds_market_key; // e.g. "golf_pga_championship_winner"
+  const oddsMarket = "outrights";
 
-  let oddsRes: AxiosResponse<OddsApiEvent[]> | null = null;
-  for (const sportKey of sportKeys) {
-    try {
-      const res = await axios.get<OddsApiEvent[]>(
-        `${ODDS_BASE}/sports/${sportKey}/odds`,
-        {
-          params: {
-            apiKey:     API_KEY,
-            markets:    [winnerMarket, cutMarket].join(","),
-            bookmakers: BOOKMAKER,
-            oddsFormat: "american",
-          },
-          timeout: 10000,
-        }
-      );
-      const hasData = (res.data?.[0]?.bookmakers?.length ?? 0) > 0;
-      console.log(`  Odds API [${sportKey}]: ${res.data?.length ?? 0} events, hasBookmaker=${hasData}`);
-      if (hasData) { oddsRes = res; break; }
-    } catch (err: any) {
-      console.warn(`  Odds API [${sportKey}] failed: ${err.message}`);
-    }
+  let oddsRes: AxiosResponse<OddsApiEvent[]>;
+  try {
+    oddsRes = await axios.get<OddsApiEvent[]>(
+      `${ODDS_BASE}/sports/${sportKey}/odds`,
+      {
+        params: {
+          apiKey:     API_KEY,
+          markets:    oddsMarket,
+          bookmakers: BOOKMAKER,
+          oddsFormat: "american",
+        },
+        timeout: 10000,
+      }
+    );
+  } catch (err: any) {
+    console.error("  Odds API request failed:", err.message);
+    return [];
   }
 
-  if (!oddsRes) {
-    console.warn("  No FanDuel odds found with any sport key — market may not be open yet");
+  if (!(oddsRes.data?.[0]?.bookmakers?.length)) {
+    console.warn(`  No FanDuel odds for ${sportKey} — market may not be open yet`);
     return [];
   }
 
@@ -162,51 +158,23 @@ export async function fetchWinOdds(): Promise<OddsPlayer[]> {
     console.warn("  Token floor reached — future fetches will be skipped.");
   }
 
-  const event      = oddsRes.data[0];
-  const bookmaker  = event.bookmakers[0];
-  const winMarketData = bookmaker.markets.find((m) => m.key === winnerMarket);
-  const cutMarketData = bookmaker.markets.find((m) => m.key === cutMarket);
+  const event     = oddsRes.data[0];
+  const bookmaker = event.bookmakers[0];
+  const market    = bookmaker.markets.find((m) => m.key === oddsMarket);
 
-  if (!winMarketData?.outcomes?.length) {
-    console.warn("  FanDuel winner market found but has no outcomes");
+  if (!market?.outcomes?.length) {
+    console.warn("  FanDuel outrights market found but has no outcomes");
     return [];
   }
 
-  if (cutMarketData) {
-    console.log(`  FanDuel: cut market available (${cutMarketData.outcomes.length} outcomes)`);
-  } else {
-    console.log(`  FanDuel: cut market (${cutMarket}) not available — will use model for cut probabilities`);
-  }
-
-  // Build a map of normalized name → cut probability (0–100) if market exists
-  const cutProbByName = new Map<string, number>();
-  if (cutMarketData?.outcomes) {
-    const cutTotal = cutMarketData.outcomes.reduce(
-      (s, o) => s + americanToImpliedProb(o.price), 0
-    );
-    for (const o of cutMarketData.outcomes) {
-      const raw = americanToImpliedProb(o.price);
-      // Normalize to remove vig, then round
-      const normalized = cutTotal > 0 ? parseFloat(((raw / cutTotal) * 100).toFixed(2)) : raw;
-      cutProbByName.set(norm(o.name), normalized);
-      // Also index by last name for fuzzy matching
-      cutProbByName.set(lastName(norm(o.name)), normalized);
-    }
-  }
-
-  // Build all players from the winner market
-  const allPlayers: OddsPlayer[] = winMarketData.outcomes.map((o) => {
-    const normName = norm(o.name);
-    const cutProb  = cutProbByName.get(normName) ?? cutProbByName.get(lastName(normName));
-    return {
-      name:            o.name,
-      win_probability: americanToImpliedProb(o.price),
-      implied_odds:    o.price,
-      sportsbook:      bookmaker.title,
-      last_updated:    bookmaker.last_update,
-      ...(cutProb !== undefined ? { cut_probability: cutProb } : {}),
-    };
-  });
+  // Build all players from the outrights market
+  const allPlayers: OddsPlayer[] = market.outcomes.map((o) => ({
+    name:            o.name,
+    win_probability: americanToImpliedProb(o.price),
+    implied_odds:    o.price,
+    sportsbook:      bookmaker.title,
+    last_updated:    bookmaker.last_update,
+  }));
 
   // Filter to only the drafted pool picks (from Supabase)
   const pickedNames = await buildPickedNamesSet();

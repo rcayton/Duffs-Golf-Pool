@@ -16,7 +16,7 @@ export interface MajorConfig {
   dates: string;        // display string
   start_date: string;   // ISO date "YYYY-MM-DD" — used to detect pre-tournament
   source: MajorSource;
-  odds_market_key: string;  // The Odds API market key
+  odds_market_key: string;  // The Odds API sport key (also used as sport identifier, market is "outrights")
 }
 
 export const ALL_MAJORS: MajorConfig[] = [
