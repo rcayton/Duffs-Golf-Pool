@@ -126,25 +126,34 @@ export async function fetchWinOdds(): Promise<OddsPlayer[]> {
   const winnerMarket = ACTIVE_MAJOR.odds_market_key;
   // Derive cut market key from winner market key (e.g. _winner → _make_cut)
   const cutMarket = winnerMarket.replace("_winner", "_make_cut");
-  // Derive sport key from market key (e.g. golf_pga_championship_winner → golf_pga_championship)
-  const sportKey = winnerMarket.replace("_winner", "");
+  // Try the event-specific sport key first (golf_pga_championship), fall back to generic "golf"
+  const sportKeys = [winnerMarket.replace("_winner", ""), "golf"];
 
-  let oddsRes: AxiosResponse<OddsApiEvent[]>;
-  try {
-    oddsRes = await axios.get<OddsApiEvent[]>(
-      `${ODDS_BASE}/sports/${sportKey}/odds`,
-      {
-        params: {
-          apiKey:     API_KEY,
-          markets:    [winnerMarket, cutMarket].join(","),
-          bookmakers: BOOKMAKER,
-          oddsFormat: "american",
-        },
-        timeout: 10000,
-      }
-    );
-  } catch (err: any) {
-    console.error("  Odds API request failed:", err.message);
+  let oddsRes: AxiosResponse<OddsApiEvent[]> | null = null;
+  for (const sportKey of sportKeys) {
+    try {
+      const res = await axios.get<OddsApiEvent[]>(
+        `${ODDS_BASE}/sports/${sportKey}/odds`,
+        {
+          params: {
+            apiKey:     API_KEY,
+            markets:    [winnerMarket, cutMarket].join(","),
+            bookmakers: BOOKMAKER,
+            oddsFormat: "american",
+          },
+          timeout: 10000,
+        }
+      );
+      const hasData = (res.data?.[0]?.bookmakers?.length ?? 0) > 0;
+      console.log(`  Odds API [${sportKey}]: ${res.data?.length ?? 0} events, hasBookmaker=${hasData}`);
+      if (hasData) { oddsRes = res; break; }
+    } catch (err: any) {
+      console.warn(`  Odds API [${sportKey}] failed: ${err.message}`);
+    }
+  }
+
+  if (!oddsRes) {
+    console.warn("  No FanDuel odds found with any sport key — market may not be open yet");
     return [];
   }
 
@@ -153,13 +162,8 @@ export async function fetchWinOdds(): Promise<OddsPlayer[]> {
     console.warn("  Token floor reached — future fetches will be skipped.");
   }
 
-  const event = oddsRes.data?.[0];
-  if (!event?.bookmakers?.length) {
-    console.warn("  No FanDuel odds in response — market may not be open yet");
-    return [];
-  }
-
-  const bookmaker   = event.bookmakers[0];
+  const event      = oddsRes.data[0];
+  const bookmaker  = event.bookmakers[0];
   const winMarketData = bookmaker.markets.find((m) => m.key === winnerMarket);
   const cutMarketData = bookmaker.markets.find((m) => m.key === cutMarket);
 
