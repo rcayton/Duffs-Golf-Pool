@@ -2,22 +2,30 @@ import cron from "node-cron";
 import dotenv from "dotenv";
 dotenv.config();
 
-import { fetchLeaderboard } from "./services/espn";
+import { fetchLeaderboard as fetchMasters } from "./services/masters";
+import { fetchLeaderboard as fetchEspn } from "./services/espn";
+import { fetchLeaderboard as fetchPgaTour } from "./services/pgatour";
 import { fetchWinOdds } from "./services/odds";
 import { saveSnapshot, saveOdds } from "./lib/cache";
+import { ACTIVE_MAJOR } from "./lib/major-config";
+
+const fetchLeaderboard =
+  ACTIVE_MAJOR.source === "masters" ? fetchMasters :
+  ACTIVE_MAJOR.source === "pgatour" ? fetchPgaTour :
+  fetchEspn;
 
 const INTERVAL = parseInt(process.env.POLL_INTERVAL_MINUTES ?? "5", 10);
 
 async function pollAll() {
   const now = new Date().toISOString();
-  console.log(`[${now}] Polling ESPN + Odds API...`);
+  console.log(`[${now}] Polling ${ACTIVE_MAJOR.source} + Odds API...`);
 
   // ESPN leaderboard
   try {
     const snapshot = await fetchLeaderboard();
     await saveSnapshot(snapshot);
     console.log(
-      `  ESPN: ${snapshot.players.length} players, phase=${snapshot.phase}, round=${snapshot.current_round}`
+      `  ${ACTIVE_MAJOR.source}: ${snapshot.players.length} players, phase=${snapshot.phase}, round=${snapshot.current_round}`
     );
   } catch (err: any) {
     console.error("  ESPN fetch failed:", err.message);
