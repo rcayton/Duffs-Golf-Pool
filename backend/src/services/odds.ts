@@ -1,16 +1,14 @@
 import axios, { AxiosResponse } from "axios";
 import { OddsPlayer } from "../types";
-import { POOL_PLAYERS } from "../lib/pool-config";
+import { loadPoolPlayers } from "../lib/pool-picks";
+import { ACTIVE_MAJOR } from "../lib/major-config";
 import dotenv from "dotenv";
 dotenv.config();
 
 const ODDS_BASE = "https://api.the-odds-api.com/v4";
 const API_KEY   = process.env.ODDS_API_KEY!;
-
-// Only pull FanDuel — one bookmaker = minimal token cost per request
-const BOOKMAKER        = "fanduel";
-const MASTERS_MARKET_KEY = "golf_masters_tournament_winner";
-const SPORT_KEY        = "golf";
+const BOOKMAKER = "fanduel";
+const SPORT_KEY = "golf";
 
 // Free tier: 500 requests/month. Set ODDS_TOKEN_FLOOR in .env to halt when low.
 const TOKEN_FLOOR = parseInt(process.env.ODDS_TOKEN_FLOOR ?? "20", 10);
@@ -33,12 +31,6 @@ interface OddsApiEvent {
 }
 
 // ─── Shared name normalizer ────────────────────────────────────────────────────
-// Used in every name-comparison call throughout this file.
-// Handles: accents (Å→a), ø→o, caps, punctuation, extra spaces.
-// Examples:
-//   "Ludvig Åberg"    → "ludvig aberg"
-//   "Nicolai Højgaard"→ "nicolai hojgaard"
-//   "R. MacIntyre"    → "r macintyre"
 
 function norm(s: string): string {
   return s
@@ -47,8 +39,8 @@ function norm(s: string): string {
     .replace(/æ/g, "ae").replace(/Æ/g, "ae")
     .replace(/ð/g, "d").replace(/þ/g, "th")
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")   // strip combining diacritics (Å→a, é→e)
-    .replace(/[^a-z ]/g, "")           // strip punctuation, digits
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z ]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -57,13 +49,20 @@ function lastName(normalized: string): string {
   return normalized.split(" ").pop() ?? normalized;
 }
 
-// ─── Build set of all 28 picked golfer names (normalized) ─────────────────────
+// ─── Build set of all drafted golfer names from Supabase ─────────────────────
 
-function buildPickedNamesSet(): Set<string> {
+async function buildPickedNamesSet(): Promise<Set<string>> {
   const names = new Set<string>();
-  POOL_PLAYERS.forEach((p) =>
-    p.picks.forEach((pick) => names.add(norm(pick.golfer_name)))
-  );
+  try {
+    const poolPlayers = await loadPoolPlayers();
+    poolPlayers.forEach((p) =>
+      p.picks
+        .filter((pick) => pick.golfer_name && pick.golfer_name !== "TBD")
+        .forEach((pick) => names.add(norm(pick.golfer_name)))
+    );
+  } catch (err) {
+    console.warn("[odds] Failed to load pool picks for filtering:", err);
+  }
   return names;
 }
 
@@ -125,16 +124,20 @@ export async function fetchWinOdds(): Promise<OddsPlayer[]> {
     return [];
   }
 
+  const winnerMarket = ACTIVE_MAJOR.odds_market_key;
+  // Derive cut market key from winner market key (e.g. _winner → _make_cut)
+  const cutMarket = winnerMarket.replace("_winner", "_make_cut");
+
   let oddsRes: AxiosResponse<OddsApiEvent[]>;
   try {
     oddsRes = await axios.get<OddsApiEvent[]>(
       `${ODDS_BASE}/sports/${SPORT_KEY}/odds`,
       {
         params: {
-          apiKey:      API_KEY,
-          markets:     MASTERS_MARKET_KEY,
-          bookmakers:  BOOKMAKER,
-          oddsFormat:  "american",
+          apiKey:     API_KEY,
+          markets:    [winnerMarket, cutMarket].join(","),
+          bookmakers: BOOKMAKER,
+          oddsFormat: "american",
         },
         timeout: 10000,
       }
@@ -155,29 +158,62 @@ export async function fetchWinOdds(): Promise<OddsPlayer[]> {
     return [];
   }
 
-  const bookmaker = event.bookmakers[0];
-  const market    = bookmaker.markets.find((m) => m.key === MASTERS_MARKET_KEY);
-  if (!market?.outcomes?.length) {
-    console.warn("  FanDuel Masters market found but has no outcomes");
+  const bookmaker   = event.bookmakers[0];
+  const winMarketData = bookmaker.markets.find((m) => m.key === winnerMarket);
+  const cutMarketData = bookmaker.markets.find((m) => m.key === cutMarket);
+
+  if (!winMarketData?.outcomes?.length) {
+    console.warn("  FanDuel winner market found but has no outcomes");
     return [];
   }
 
-  const allPlayers: OddsPlayer[] = market.outcomes.map((o) => ({
-    name:            o.name,
-    win_probability: americanToImpliedProb(o.price),
-    implied_odds:    o.price,
-    sportsbook:      bookmaker.title,
-    last_updated:    bookmaker.last_update,
-  }));
+  if (cutMarketData) {
+    console.log(`  FanDuel: cut market available (${cutMarketData.outcomes.length} outcomes)`);
+  } else {
+    console.log(`  FanDuel: cut market (${cutMarket}) not available — will use model for cut probabilities`);
+  }
 
-  // Filter to only the 28 pool picks using the shared normalizer
-  const pickedNames = buildPickedNamesSet();
+  // Build a map of normalized name → cut probability (0–100) if market exists
+  const cutProbByName = new Map<string, number>();
+  if (cutMarketData?.outcomes) {
+    const cutTotal = cutMarketData.outcomes.reduce(
+      (s, o) => s + americanToImpliedProb(o.price), 0
+    );
+    for (const o of cutMarketData.outcomes) {
+      const raw = americanToImpliedProb(o.price);
+      // Normalize to remove vig, then round
+      const normalized = cutTotal > 0 ? parseFloat(((raw / cutTotal) * 100).toFixed(2)) : raw;
+      cutProbByName.set(norm(o.name), normalized);
+      // Also index by last name for fuzzy matching
+      cutProbByName.set(lastName(norm(o.name)), normalized);
+    }
+  }
+
+  // Build all players from the winner market
+  const allPlayers: OddsPlayer[] = winMarketData.outcomes.map((o) => {
+    const normName = norm(o.name);
+    const cutProb  = cutProbByName.get(normName) ?? cutProbByName.get(lastName(normName));
+    return {
+      name:            o.name,
+      win_probability: americanToImpliedProb(o.price),
+      implied_odds:    o.price,
+      sportsbook:      bookmaker.title,
+      last_updated:    bookmaker.last_update,
+      ...(cutProb !== undefined ? { cut_probability: cutProb } : {}),
+    };
+  });
+
+  // Filter to only the drafted pool picks (from Supabase)
+  const pickedNames = await buildPickedNamesSet();
+
+  if (pickedNames.size === 0) {
+    console.warn("  No drafted picks found — returning full field odds");
+    return normalizeProbs(allPlayers);
+  }
 
   const picked = allPlayers.filter((player) => {
-    const n = norm(player.name);
-    // 1. Exact normalized match
+    const n    = norm(player.name);
     if (pickedNames.has(n)) return true;
-    // 2. Last-name match (catches "Christopher Gotterup" vs "Chris Gotterup")
     const last = lastName(n);
     return [...pickedNames].some((pn) => lastName(pn) === last);
   });
@@ -185,13 +221,13 @@ export async function fetchWinOdds(): Promise<OddsPlayer[]> {
   if (picked.length < 3) {
     console.warn(
       `  Only ${picked.length} pool picks matched FanDuel names — ` +
-      `returning full field. Check spelling in pool-config.ts.`
+      `returning full field. Check name spelling in draft picks.`
     );
     return normalizeProbs(allPlayers);
   }
 
   console.log(
-    `  FanDuel: ${picked.length}/28 pool picks matched ` +
+    `  FanDuel: ${picked.length}/${pickedNames.size} pool picks matched ` +
     `(from ${allPlayers.length} total in market)`
   );
 

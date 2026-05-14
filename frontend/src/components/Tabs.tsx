@@ -8,11 +8,11 @@ interface Props {
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "picks",       label: "My Picks" },
-  { id: "draft",       label: "Draft" },
   { id: "leaderboard", label: "Leaderboard" },
   { id: "pot",         label: "Pot Breakdown" },
   { id: "history",     label: "Duffs Leaderboard" },
   { id: "charts",      label: "Charts" },
+  { id: "draft",       label: "Draft" },
 ];
 
 export function Tabs({ active, onChange }: Props) {

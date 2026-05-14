@@ -20,7 +20,8 @@ export interface GolferScore {
 export interface OddsPlayer {
   name: string;
   win_probability: number;   // 0–100
-  implied_odds: number;      // decimal odds e.g. 4.5
+  cut_probability?: number;  // 0–100, from make-cut market (undefined if market unavailable)
+  implied_odds: number;      // american odds e.g. +1200
   sportsbook: string;
   last_updated: string;
 }

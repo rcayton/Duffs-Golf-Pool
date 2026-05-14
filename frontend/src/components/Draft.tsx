@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useDraft } from "../hooks/useDraft";
 import { DraftPickRecord } from "../lib/types";
-import { startLottery, submitPick, completeDraftApi, resetDraftApi } from "../lib/api";
+import { startLottery, submitPick, completeDraftApi } from "../lib/api";
 import { PLAYER_COLORS, PLAYER_BG_COLORS } from "../lib/utils";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -30,9 +30,7 @@ interface LotterySectionProps {
   playerNames: Record<string, string>;
   status: string;
   onStartLottery: () => void;
-  onReset: () => void;
   lotteryRunning: boolean;
-  resetRunning: boolean;
   animPhase: AnimPhase;
   animCountdown: number;
   animRevealedCount: number;
@@ -57,9 +55,7 @@ function LotterySection({
   playerNames,
   status,
   onStartLottery,
-  onReset,
   lotteryRunning,
-  resetRunning,
   animPhase,
   animCountdown,
   animRevealedCount,
@@ -106,48 +102,24 @@ function LotterySection({
           </p>
         </div>
 
-        {!isAnimating && (
-          <div style={{ display: "flex", gap: 8 }}>
-            {status === "idle" && (
-              <button
-                onClick={onStartLottery}
-                disabled={lotteryRunning}
-                style={{
-                  padding: "8px 20px",
-                  background: lotteryRunning ? "var(--bg-surface-2)" : "var(--masters-green)",
-                  color: lotteryRunning ? "var(--text-secondary)" : "#fff",
-                  border: "none",
-                  borderRadius: "var(--radius-md)",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: lotteryRunning ? "not-allowed" : "pointer",
-                  transition: "background 0.2s",
-                }}
-              >
-                {lotteryRunning ? "Running…" : "🎲 Start Lottery"}
-              </button>
-            )}
-
-            {status !== "idle" && (
-              <button
-                onClick={onReset}
-                disabled={resetRunning}
-                style={{
-                  padding: "8px 16px",
-                  background: "transparent",
-                  color: "#A32D2D",
-                  border: "1px solid #A32D2D",
-                  borderRadius: "var(--radius-md)",
-                  fontSize: 13,
-                  fontWeight: 500,
-                  cursor: resetRunning ? "not-allowed" : "pointer",
-                  opacity: resetRunning ? 0.6 : 1,
-                }}
-              >
-                {resetRunning ? "Resetting…" : "↺ Reset Draft"}
-              </button>
-            )}
-          </div>
+        {!isAnimating && status === "idle" && (
+          <button
+            onClick={onStartLottery}
+            disabled={lotteryRunning}
+            style={{
+              padding: "8px 20px",
+              background: lotteryRunning ? "var(--bg-surface-2)" : "var(--masters-green)",
+              color: lotteryRunning ? "var(--text-secondary)" : "#fff",
+              border: "none",
+              borderRadius: "var(--radius-md)",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: lotteryRunning ? "not-allowed" : "pointer",
+              transition: "background 0.2s",
+            }}
+          >
+            {lotteryRunning ? "Running…" : "🎲 Start Lottery"}
+          </button>
         )}
       </div>
 
@@ -512,7 +484,6 @@ export function Draft({ onPicksChanged }: DraftProps) {
 
   const [lotteryRunning, setLotteryRunning] = useState(false);
   const [lotteryError,   setLotteryError]   = useState<string | null>(null);
-  const [resetRunning,   setResetRunning]   = useState(false);
   const [completing,     setCompleting]     = useState(false);
   const [completeError,  setCompleteError]  = useState<string | null>(null);
 
@@ -591,23 +562,6 @@ export function Draft({ onPicksChanged }: DraftProps) {
     }
   };
 
-  const handleReset = async () => {
-    if (!window.confirm("Reset the entire draft? All picks will be cleared.")) return;
-    setResetRunning(true);
-    try {
-      await resetDraftApi();
-      // Clear the animation key so the next lottery plays the animation again
-      localStorage.removeItem(ANIM_KEY);
-      animatedForKey.current = "";
-      refresh();
-      onPicksChanged?.();
-    } catch (err: any) {
-      alert(`Reset failed: ${err.message}`);
-    } finally {
-      setResetRunning(false);
-    }
-  };
-
   const handleSavePick = useCallback(
     async (pickNumber: number, golferName: string): Promise<string | null> => {
       const { error: err } = await submitPick(pickNumber, golferName);
@@ -678,9 +632,7 @@ export function Draft({ onPicksChanged }: DraftProps) {
         playerNames={playerNames}
         status={status}
         onStartLottery={handleStartLottery}
-        onReset={handleReset}
         lotteryRunning={lotteryRunning}
-        resetRunning={resetRunning}
         animPhase={animPhase}
         animCountdown={animCountdown}
         animRevealedCount={animRevealedCount}
@@ -827,28 +779,6 @@ export function Draft({ onPicksChanged }: DraftProps) {
             </div>
           )}
 
-          {/* Reset button when complete */}
-          {status === "complete" && (
-            <div style={{ marginTop: "1rem", display: "flex", justifyContent: "flex-end" }}>
-              <button
-                onClick={handleReset}
-                disabled={resetRunning}
-                style={{
-                  padding: "8px 16px",
-                  background: "transparent",
-                  color: "#A32D2D",
-                  border: "1px solid #A32D2D",
-                  borderRadius: "var(--radius-md)",
-                  fontSize: 13,
-                  fontWeight: 500,
-                  cursor: resetRunning ? "not-allowed" : "pointer",
-                  opacity: resetRunning ? 0.6 : 1,
-                }}
-              >
-                {resetRunning ? "Resetting…" : "↺ Reset Draft"}
-              </button>
-            </div>
-          )}
         </>
       )}
     </div>

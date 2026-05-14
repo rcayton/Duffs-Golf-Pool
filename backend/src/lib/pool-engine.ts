@@ -62,6 +62,15 @@ function findWinProb(pickName: string, odds: OddsPlayer[]): number {
   return found?.win_probability ?? 0;
 }
 
+function findCutProb(pickName: string, odds: OddsPlayer[]): number | undefined {
+  const normPick = normalizeName(pickName);
+  let found = odds.find((o) => normalizeName(o.name) === normPick);
+  if (found?.cut_probability !== undefined) return found.cut_probability;
+  const pickLast = lastName(normPick);
+  found = odds.find((o) => lastName(normalizeName(o.name)) === pickLast);
+  return found?.cut_probability;
+}
+
 // ─── Luck score model ──────────────────────────────────────────────────────────
 // Measures how close each pool player's picks were to the cut without missing it.
 // Only meaningful in round 3+ when cut_made is finalised.
@@ -153,14 +162,16 @@ export function enrichPoolData(
         winProb = findWinProb(pick.golfer_name, odds);
       }
 
-      const cutProb = score
-        ? estimateCutProb(
-            score.score_to_par,
-            snapshot.projected_cut,
-            snapshot.phase,
-            score.thru
-          )
-        : estimateCutProb(0, snapshot.projected_cut, snapshot.phase, "-");
+      // Cut probability: use FanDuel odds during pre-tournament, model thereafter
+      let cutProb: number;
+      if (snapshot.phase === "pre") {
+        cutProb = findCutProb(pick.golfer_name, odds) ??
+          estimateCutProb(0, snapshot.projected_cut, snapshot.phase, "-");
+      } else {
+        cutProb = score
+          ? estimateCutProb(score.score_to_par, snapshot.projected_cut, snapshot.phase, score.thru)
+          : estimateCutProb(0, snapshot.projected_cut, snapshot.phase, "-");
+      }
 
       return {
         ...pick,
