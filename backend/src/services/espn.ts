@@ -77,15 +77,22 @@ export async function fetchLeaderboard(): Promise<LeaderboardSnapshot> {
     };
   }
 
-  const res = await axios.get<EspnEventsResponse>(`${EVENTS_URL}?limit=200`, {
-    timeout: 10000,
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; MastersPool/1.0)",
-    },
-  });
+  // Request events scoped to the active major's week so we don't accidentally
+  // pick up the prior tournament (e.g. Masters data while PGA hasn't started).
+  const startYmd = ACTIVE_MAJOR.start_date.replace(/-/g, ""); // "20260514"
+  const endDate  = new Date(new Date(ACTIVE_MAJOR.start_date).getTime() + 5 * 86_400_000);
+  const endYmd   = endDate.toISOString().slice(0, 10).replace(/-/g, ""); // "20260519"
+
+  const res = await axios.get<EspnEventsResponse>(
+    `${EVENTS_URL}?limit=50&dates=${startYmd}-${endYmd}`,
+    {
+      timeout: 10000,
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; MastersPool/1.0)" },
+    }
+  );
 
   const event = res.data?.events?.[0];
-  if (!event) throw new Error("No event data in ESPN response");
+  if (!event) throw new Error(`No ESPN event found for ${ACTIVE_MAJOR.name} (${startYmd}–${endYmd})`);
 
   const period = event.fullStatus?.period ?? 0;
   const completed = event.fullStatus?.type?.completed ?? false;
