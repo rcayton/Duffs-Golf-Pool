@@ -44,6 +44,7 @@ interface DualBarsProps {
 }
 
 function DualBars({ winProb, cutProb, playerColor }: DualBarsProps) {
+  const noOdds = winProb === 0;
   return (
     <div style={{ minWidth: 80, display: "flex", flexDirection: "column", gap: 5 }}>
       <div>
@@ -52,22 +53,24 @@ function DualBars({ winProb, cutProb, playerColor }: DualBarsProps) {
           marginBottom: 2,
         }}>
           <span style={{ fontSize: 10, color: "var(--text-tertiary)" }}>Win %</span>
-          <span style={{ fontSize: 10, fontWeight: 500, color: playerColor }}>
-            {winProb.toFixed(1)}%
+          <span style={{ fontSize: 10, fontWeight: 500, color: noOdds ? "var(--text-tertiary)" : playerColor }}>
+            {noOdds ? "—" : `${winProb.toFixed(1)}%`}
           </span>
         </div>
-        <div style={{
-          height: 5, background: "var(--bg-surface-2)",
-          borderRadius: 5, overflow: "hidden",
-        }}>
+        {!noOdds && (
           <div style={{
-            height: 5,
-            width: `${Math.min(100, winProb)}%`,
-            background: playerColor,
-            borderRadius: 5,
-            transition: "width 0.4s ease",
-          }} />
-        </div>
+            height: 5, background: "var(--bg-surface-2)",
+            borderRadius: 5, overflow: "hidden",
+          }}>
+            <div style={{
+              height: 5,
+              width: `${Math.min(100, winProb)}%`,
+              background: playerColor,
+              borderRadius: 5,
+              transition: "width 0.4s ease",
+            }} />
+          </div>
+        )}
       </div>
 
       <div>
@@ -142,14 +145,15 @@ export function PlayerCard({ player, isLeader, isLuckiest, isReigningChamp, rank
           <div>
             <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text-primary)", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
               {player.name}
-              {player.combined_win_odds > 0 && (
-                <span style={{
-                  fontSize: 11, fontWeight: 400,
-                  color: "var(--text-secondary)",
-                }}>
+              {player.combined_win_odds > 0 ? (
+                <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text-secondary)" }}>
                   {player.combined_win_odds.toFixed(1)}% to win
                 </span>
-              )}
+              ) : phase === "pre" ? (
+                <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text-tertiary)" }}>
+                  odds pending
+                </span>
+              ) : null}
               {isReigningChamp && (
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: "1px 7px",
