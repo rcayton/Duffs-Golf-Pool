@@ -8,7 +8,6 @@ dotenv.config();
 const ODDS_BASE = "https://api.the-odds-api.com/v4";
 const API_KEY   = process.env.ODDS_API_KEY!;
 const BOOKMAKER = "fanduel";
-const SPORT_KEY = "golf";
 
 // Free tier: 500 requests/month. Set ODDS_TOKEN_FLOOR in .env to halt when low.
 const TOKEN_FLOOR = parseInt(process.env.ODDS_TOKEN_FLOOR ?? "20", 10);
@@ -127,11 +126,13 @@ export async function fetchWinOdds(): Promise<OddsPlayer[]> {
   const winnerMarket = ACTIVE_MAJOR.odds_market_key;
   // Derive cut market key from winner market key (e.g. _winner → _make_cut)
   const cutMarket = winnerMarket.replace("_winner", "_make_cut");
+  // Derive sport key from market key (e.g. golf_pga_championship_winner → golf_pga_championship)
+  const sportKey = winnerMarket.replace("_winner", "");
 
   let oddsRes: AxiosResponse<OddsApiEvent[]>;
   try {
     oddsRes = await axios.get<OddsApiEvent[]>(
-      `${ODDS_BASE}/sports/${SPORT_KEY}/odds`,
+      `${ODDS_BASE}/sports/${sportKey}/odds`,
       {
         params: {
           apiKey:     API_KEY,
