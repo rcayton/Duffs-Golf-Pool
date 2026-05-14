@@ -1,0 +1,161 @@
+import axios from "axios";
+import { GolferScore, LeaderboardSnapshot, TournamentPhase } from "../types";
+import { ACTIVE_MAJOR } from "../lib/major-config";
+
+const GRAPHQL_URL = "https://orchestrator.pgatour.com/graphql";
+const API_KEY = "da2-gsrx5bibzbb4njvhl7t37wqyl4";
+
+// Tournament IDs: keyed by major config id
+const TOURNAMENT_IDS: Record<string, string> = {
+  pga_2026: "R2026033",
+  us_open_2026: "R2026026",
+  the_open_2026: "R2026100",
+};
+
+function parseTotalStr(s: string): number {
+  if (!s || s === "E" || s === "--" || s === "-") return 0;
+  return parseInt(s.replace("+", ""), 10) || 0;
+}
+
+function parseRoundScore(s: string): number {
+  if (!s || s === "-" || s === "--") return 0;
+  return parseInt(s, 10) || 0;
+}
+
+function mapPlayerState(state: string): GolferScore["status"] {
+  switch (state) {
+    case "CUT":          return "cut";
+    case "WITHDRAWN":    return "wd";
+    case "DISQUALIFIED": return "dq";
+    case "COMPLETE":     return "complete";
+    default:             return "active";
+  }
+}
+
+function determinePhase(
+  tournamentStatus: string,
+  roundHeader: string,
+): TournamentPhase {
+  if (tournamentStatus === "NOT_STARTED") return "pre";
+  if (tournamentStatus === "COMPLETED")   return "complete";
+  // IN_PROGRESS: roundHeader is "R1", "R2", "R3", "R4"
+  const round = parseInt(roundHeader.replace("R", ""), 10);
+  if (round >= 1 && round <= 4) return `round${round as 1 | 2 | 3 | 4}`;
+  return "round1";
+}
+
+export async function fetchLeaderboard(): Promise<LeaderboardSnapshot> {
+  const tournamentId = TOURNAMENT_IDS[ACTIVE_MAJOR.id];
+
+  // Before tournament start, return a pre-tournament snapshot
+  const todayUtc = new Date().toISOString().slice(0, 10);
+  if (todayUtc < ACTIVE_MAJOR.start_date || !tournamentId) {
+    return {
+      tournament_name: ACTIVE_MAJOR.name,
+      phase: "pre",
+      current_round: 0,
+      cut_line: null,
+      projected_cut: null,
+      last_updated: new Date().toISOString(),
+      players: [],
+    };
+  }
+
+  const query = `{
+    leaderboardV3(id: "${tournamentId}") {
+      id
+      tournamentStatus
+      leaderboardRoundHeader
+      cutLineProbabilities {
+        projectedCutLine
+        probableCutLine
+      }
+      players {
+        ... on PlayerRowV3 {
+          id
+          player {
+            id
+            displayName
+            abbreviations
+          }
+          scoringData {
+            position
+            total
+            totalSort
+            thru
+            score
+            scoreSort
+            playerState
+            currentRound
+            rounds
+          }
+        }
+      }
+    }
+  }`;
+
+  const res = await axios.post(
+    GRAPHQL_URL,
+    { query },
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": API_KEY,
+      },
+      timeout: 10000,
+    }
+  );
+
+  const lb = res.data?.data?.leaderboardV3;
+  if (!lb) {
+    const errs = res.data?.errors?.map((e: any) => e.message).join("; ");
+    throw new Error(`PGA Tour API error: ${errs ?? "No leaderboard data"}`);
+  }
+
+  const phase = determinePhase(lb.tournamentStatus, lb.leaderboardRoundHeader ?? "R1");
+  const currentRound = lb.leaderboardRoundHeader
+    ? parseInt(lb.leaderboardRoundHeader.replace("R", ""), 10) || 0
+    : 0;
+
+  const projectedCut: number | null =
+    lb.cutLineProbabilities?.projectedCutLine != null
+      ? parseTotalStr(String(lb.cutLineProbabilities.projectedCutLine))
+      : null;
+
+  const players: GolferScore[] = (lb.players ?? [])
+    .filter((row: any) => row?.player)
+    .map((row: any) => {
+      const p = row.player;
+      const s = row.scoringData;
+      const scoreToPar = s.totalSort ?? parseTotalStr(s.total);
+      const roundScores: number[] = Array.isArray(s.rounds)
+        ? s.rounds.map((r: string) => parseRoundScore(r))
+        : [0, 0, 0, 0];
+      const status = mapPlayerState(s.playerState);
+
+      return {
+        espn_id: row.id,
+        name: p.displayName,
+        display_name: p.abbreviations || p.displayName,
+        position: s.position ?? "",
+        score_to_par: scoreToPar,
+        score_to_par_str: s.total ?? "E",
+        thru: s.thru ?? "-",
+        round_scores: roundScores,
+        today_score: s.scoreSort ?? parseTotalStr(s.score),
+        status,
+        cut_made: status === "cut" ? false : status === "active" ? null : true,
+        last_updated: new Date().toISOString(),
+      };
+    });
+
+  return {
+    tournament_name: ACTIVE_MAJOR.name,
+    phase,
+    current_round: currentRound,
+    cut_line: null,
+    projected_cut: projectedCut,
+    last_updated: new Date().toISOString(),
+    players,
+  };
+}

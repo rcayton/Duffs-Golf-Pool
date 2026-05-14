@@ -3,10 +3,11 @@
 // ACTIVE_MAJOR_ID to switch the live feed and pool config.
 //
 // source:
-//   "masters" → uses masters.com scores.json (only for The Masters)
-//   "espn"    → uses ESPN events API (PGA Championship, US Open, The Open)
+//   "masters"  → uses masters.com scores.json (only for The Masters)
+//   "espn"     → uses ESPN events API (fallback)
+//   "pgatour"  → uses PGA Tour GraphQL API (preferred for non-Masters majors)
 
-export type MajorSource = "masters" | "espn";
+export type MajorSource = "masters" | "espn" | "pgatour";
 
 export interface MajorConfig {
   id: string;           // stable key used as Supabase cache key
@@ -37,7 +38,7 @@ export const ALL_MAJORS: MajorConfig[] = [
     year: 2026,
     dates: "May 14–17, 2026",
     start_date: "2026-05-14",
-    source: "espn",
+    source: "pgatour",
     odds_market_key: "golf_pga_championship_winner",
   },
 ];

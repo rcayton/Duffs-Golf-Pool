@@ -3,9 +3,13 @@ import { loadSnapshot, loadOdds, saveSnapshot, saveOdds, listArchivedMajors, loa
 import { buildDashboard } from "../lib/pool-engine";
 import { fetchLeaderboard as fetchMasters } from "../services/masters";
 import { fetchLeaderboard as fetchEspn } from "../services/espn";
+import { fetchLeaderboard as fetchPgaTour } from "../services/pgatour";
 import { fetchWinOdds } from "../services/odds";
 import { ALL_MAJORS, ACTIVE_MAJOR } from "../lib/major-config";
-const fetchLeaderboard = ACTIVE_MAJOR.source === "masters" ? fetchMasters : fetchEspn;
+const fetchLeaderboard =
+  ACTIVE_MAJOR.source === "masters" ? fetchMasters :
+  ACTIVE_MAJOR.source === "pgatour" ? fetchPgaTour :
+  fetchEspn;
 import {
   loadDraftState,
   runLottery,
