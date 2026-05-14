@@ -1,9 +1,11 @@
 import { Router, Request, Response } from "express";
 import { loadSnapshot, loadOdds, saveSnapshot, saveOdds, listArchivedMajors, loadArchive, loadWinProbHistory } from "../lib/cache";
 import { buildDashboard } from "../lib/pool-engine";
-import { fetchLeaderboard } from "../services/masters";
+import { fetchLeaderboard as fetchMasters } from "../services/masters";
+import { fetchLeaderboard as fetchEspn } from "../services/espn";
 import { fetchWinOdds } from "../services/odds";
 import { ALL_MAJORS, ACTIVE_MAJOR } from "../lib/major-config";
+const fetchLeaderboard = ACTIVE_MAJOR.source === "masters" ? fetchMasters : fetchEspn;
 import {
   loadDraftState,
   runLottery,
