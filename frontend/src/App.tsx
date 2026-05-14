@@ -16,6 +16,7 @@ import { MajorInfo, MajorArchive } from "./lib/types";
 export default function App() {
   const { data, loading, error, refresh } = useDashboard();
   const [tab, setTab] = useState<TabId>("picks");
+  const [showBugPage, setShowBugPage] = useState(false);
 
   // Major selector state
   const [majors, setMajors] = useState<MajorInfo[]>([]);
@@ -164,6 +165,25 @@ export default function App() {
 
   return (
     <>
+      {showBugPage && (
+        <div
+          onClick={() => setShowBugPage(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "#000", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center", gap: 24,
+            cursor: "pointer",
+          }}
+        >
+          <div style={{ fontSize: 160, lineHeight: 1 }}>🖕</div>
+          <div style={{ color: "#fff", fontSize: 22, fontWeight: 700 }}>
+            Thanks for the feedback!
+          </div>
+          <div style={{ color: "#888", fontSize: 14 }}>
+            (click anywhere to dismiss)
+          </div>
+        </div>
+      )}
       <Header
         phase={snapshot.phase}
         round={snapshot.current_round}
@@ -226,6 +246,18 @@ export default function App() {
           <WinProbChart poolPlayers={pool_players} currentPhase={snapshot.phase} />
         )}
       </main>
+      <button
+        onClick={() => setShowBugPage(true)}
+        style={{
+          position: "fixed", bottom: 16, right: 16, zIndex: 100,
+          padding: "8px 14px", fontSize: 12, fontWeight: 600,
+          background: "var(--bg-surface-2)", color: "var(--text-secondary)",
+          border: "1px solid var(--border)", borderRadius: "var(--radius-md)",
+          cursor: "pointer", opacity: 0.7,
+        }}
+      >
+        Report Bug
+      </button>
     </>
   );
 }
