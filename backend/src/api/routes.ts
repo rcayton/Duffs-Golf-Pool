@@ -142,9 +142,10 @@ router.get("/draft", async (_req: Request, res: Response) => {
         picks: [],
         completed_at: null,
         updated_at: new Date().toISOString(),
+        draft_at: ACTIVE_MAJOR.draft_at ?? null,
       });
     }
-    return res.json(state);
+    return res.json({ ...state, draft_at: ACTIVE_MAJOR.draft_at ?? null });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

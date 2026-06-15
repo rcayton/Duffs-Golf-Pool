@@ -91,7 +91,7 @@ export async function validatePick(
   // Case-insensitive exact match against the field
   const matched = field.find((f) => normalizeName(f.name) === norm);
   if (!matched) {
-    return { ok: false, error: `"${golferName}" is not in the PGA Championship field.` };
+    return { ok: false, error: `"${golferName}" is not in the ${ACTIVE_MAJOR.short_name} field.` };
   }
 
   // Duplicate check — same golfer already picked in a different slot

@@ -18,6 +18,7 @@ export interface MajorConfig {
   start_date: string;   // ISO date "YYYY-MM-DD" — used to detect pre-tournament
   source: MajorSource;
   odds_market_key: string;  // The Odds API sport key (also used as sport identifier, market is "outrights")
+  draft_at?: string;    // ISO timestamp (UTC) of the scheduled draft lottery — drives the countdown banner
 }
 
 export const ALL_MAJORS: MajorConfig[] = [
@@ -41,13 +42,25 @@ export const ALL_MAJORS: MajorConfig[] = [
     source: "pgatour",
     odds_market_key: "golf_pga_championship_winner",
   },
+  {
+    id: "us_open_2026",
+    name: "2026 U.S. Open",
+    short_name: "U.S. Open 2026",
+    year: 2026,
+    dates: "June 18–21, 2026",
+    start_date: "2026-06-18",
+    source: "pgatour",
+    odds_market_key: "golf_us_open_winner",
+    // Draft lottery: Wednesday June 17, 2026, 10:00 PM Central (CDT = UTC−5) → 03:00 UTC Jun 18
+    draft_at: "2026-06-18T03:00:00Z",
+  },
 ];
 
 // ─── Active major ──────────────────────────────────────────────────────────────
 // Change this ID to switch to the next major. Everything else routes
 // automatically based on the MajorConfig above.
 
-export const ACTIVE_MAJOR_ID = "pga_2026";
+export const ACTIVE_MAJOR_ID = "us_open_2026";
 
 export const ACTIVE_MAJOR: MajorConfig =
   ALL_MAJORS.find((m) => m.id === ACTIVE_MAJOR_ID) ?? ALL_MAJORS[0];

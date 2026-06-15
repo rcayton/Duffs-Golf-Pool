@@ -2,7 +2,9 @@ import { PoolPlayer } from "../types";
 
 // ─── Pool configuration ────────────────────────────────────────────────────────
 // Edit this file to update picks or player info before each major.
-// dues_owed = PGA Championship $10 per player (no rollover — Mike won Masters 2026)
+// dues_owed = U.S. Open $10 per player.
+// Picks are sourced live from the draft (Supabase pool_picks) — the "TBD"
+// placeholders below are only the pre-draft fallback.
 
 export const POOL_PLAYERS: PoolPlayer[] = [
   {
@@ -91,17 +93,22 @@ export const POOL_PLAYERS: PoolPlayer[] = [
   },
 ];
 
-// Pot breakdown — no rollover from Masters 2026 (Mike won)
+// Pot breakdown — no one picked the PGA Championship winner (Aaron Rai, −9),
+// so the entire PGA pot rolls into the U.S. Open.
+// Base PGA dues = 7 players × $10 = $70 → recorded as $10 per player below.
+// If PGA cut-penalty money should also carry over, bump these per-player amounts
+// so they sum to the full archived PGA pot total.
 export const POT_CONFIG = {
   dues_per_player: 10,
   cut_penalty: 5,
+  rollover_label: "PGA Championship 2026 rollover",
   rollovers: {
-    sullivan: { masters_2026: 0 },
-    mikael:   { masters_2026: 0 },
-    mike:     { masters_2026: 0 },
-    buer:     { masters_2026: 0 },
-    robbie:   { masters_2026: 0 },
-    caleb:    { masters_2026: 0 },
-    alex:     { masters_2026: 0 },
-  } as Record<string, { masters_2026: number }>,
+    sullivan: { pga_2026: 10 },
+    mikael:   { pga_2026: 10 },
+    mike:     { pga_2026: 10 },
+    buer:     { pga_2026: 10 },
+    robbie:   { pga_2026: 10 },
+    caleb:    { pga_2026: 10 },
+    alex:     { pga_2026: 10 },
+  } as Record<string, Record<string, number>>,
 };

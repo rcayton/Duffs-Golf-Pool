@@ -124,4 +124,5 @@ export interface DraftState {
   picks:        DraftPickRecord[];
   completed_at: string | null;
   updated_at:   string;
+  draft_at?:    string | null;    // ISO timestamp of the scheduled draft lottery
 }

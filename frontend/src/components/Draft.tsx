@@ -21,6 +21,88 @@ function roundLabel(round: number): string {
   return `Round ${suffix[round] ?? round}`;
 }
 
+// ─── DraftScheduleBanner ───────────────────────────────────────────────────────
+// Shows the scheduled draft lottery time (Central) with a live countdown.
+// Only rendered before the lottery has run (status === "idle").
+
+function formatDraftTime(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/Chicago",
+    timeZoneName: "short",
+  });
+}
+
+function countdownParts(target: number, now: number): string | null {
+  let diff = Math.floor((target - now) / 1000);
+  if (diff <= 0) return null;
+  const d = Math.floor(diff / 86400); diff -= d * 86400;
+  const h = Math.floor(diff / 3600);  diff -= h * 3600;
+  const m = Math.floor(diff / 60);    const s = diff - m * 60;
+  const parts: string[] = [];
+  if (d > 0) parts.push(`${d}d`);
+  if (d > 0 || h > 0) parts.push(`${h}h`);
+  parts.push(`${m}m`);
+  if (d === 0) parts.push(`${s}s`);
+  return parts.join(" ");
+}
+
+function DraftScheduleBanner({ draftAt }: { draftAt: string }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const target = new Date(draftAt).getTime();
+  if (Number.isNaN(target)) return null;
+  const countdown = countdownParts(target, now);
+  const isOpen = countdown === null;
+
+  return (
+    <div style={{
+      background: isOpen ? "#E1F5EE" : "var(--masters-green)",
+      color: isOpen ? "#0F6E56" : "#fff",
+      borderRadius: "var(--radius-lg)",
+      padding: "1rem 1.25rem",
+      marginBottom: "1.25rem",
+      boxShadow: "var(--shadow-card)",
+      border: isOpen ? "1px solid #A5D6A7" : "none",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
+      gap: 10,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 22 }}>🗓️</span>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>
+            {isOpen ? "Draft time — start the lottery below" : "Draft Lottery Scheduled"}
+          </div>
+          <div style={{ fontSize: 13, opacity: isOpen ? 0.85 : 0.9, marginTop: 1 }}>
+            {formatDraftTime(draftAt)}
+          </div>
+        </div>
+      </div>
+      {!isOpen && (
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.8 }}>
+            Starts in
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
+            {countdown}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── LotterySection ────────────────────────────────────────────────────────────
 
 type AnimPhase = "idle" | "countdown" | "revealing";
@@ -626,6 +708,11 @@ export function Draft({ onPicksChanged }: DraftProps) {
 
   return (
     <div>
+      {/* Scheduled-draft countdown — only before the lottery has run */}
+      {status === "idle" && animPhase === "idle" && state?.draft_at && (
+        <DraftScheduleBanner draftAt={state.draft_at} />
+      )}
+
       {/* Lottery card */}
       <LotterySection
         draftOrder={draftOrder}

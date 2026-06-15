@@ -6,7 +6,7 @@ const POLL_MS = 2_000; // 2-second poll so all watchers see picks land quickly
 
 interface UseDraftResult {
   state:      DraftState | null;
-  field:      string[];         // PGA Championship player names for autocomplete
+  field:      string[];         // tournament field player names for autocomplete
   loading:    boolean;
   error:      string | null;
   refresh:    () => void;
@@ -19,6 +19,7 @@ const IDLE_STATE: DraftState = {
   picks:        [],
   completed_at: null,
   updated_at:   new Date().toISOString(),
+  draft_at:     null,
 };
 
 export function useDraft(): UseDraftResult {

@@ -5,8 +5,9 @@ import { ACTIVE_MAJOR } from "../lib/major-config";
 const GRAPHQL_URL = "https://orchestrator.pgatour.com/graphql";
 const API_KEY = "da2-gsrx5bibzbb4njvhl7t37wqyl4";
 
-// Tournament IDs: keyed by major config id
-const TOURNAMENT_IDS: Record<string, string> = {
+// Tournament IDs: keyed by major config id (PGA Tour event ids, R{year}{event}).
+// Exported so the draft field fetcher can resolve the active tournament's entry list.
+export const TOURNAMENT_IDS: Record<string, string> = {
   pga_2026: "R2026033",
   us_open_2026: "R2026026",
   the_open_2026: "R2026100",

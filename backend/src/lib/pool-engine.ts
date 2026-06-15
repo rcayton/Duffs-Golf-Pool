@@ -233,7 +233,7 @@ export function calculatePot(poolPlayers: EnrichedPoolPlayer[]): PotSummary {
   return {
     base_dues:           baseDues,
     rollover_total:      rolloverTotal,
-    rollover_label:      "Masters 2026 rollover",
+    rollover_label:      POT_CONFIG.rollover_label ?? "Rollover",
     cut_penalties_total: cutPenalties,
     total: baseDues + rolloverTotal + cutPenalties,
   };
