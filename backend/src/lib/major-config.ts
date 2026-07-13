@@ -19,6 +19,8 @@ export interface MajorConfig {
   source: MajorSource;
   odds_market_key: string;  // The Odds API sport key (also used as sport identifier, market is "outrights")
   draft_at?: string;    // ISO timestamp (UTC) of the scheduled draft lottery — drives the countdown banner
+  play_start_hour_et?: number; // odds/history polling window override (default 8–19 ET)
+  play_end_hour_et?: number;   // UK-based majors play overnight ET, so they need earlier hours
 }
 
 export const ALL_MAJORS: MajorConfig[] = [
@@ -54,13 +56,26 @@ export const ALL_MAJORS: MajorConfig[] = [
     // Draft lottery: Wednesday June 17, 2026, 10:00 PM Central (CDT = UTC−5) → 03:00 UTC Jun 18
     draft_at: "2026-06-18T03:00:00Z",
   },
+  {
+    id: "the_open_2026",
+    name: "2026 Open Championship",
+    short_name: "The Open 2026",
+    year: 2026,
+    dates: "July 16–19, 2026",
+    start_date: "2026-07-16",
+    source: "pgatour",
+    odds_market_key: "golf_the_open_championship_winner",
+    // Royal Birkdale tee times ≈ 1:30am–3pm ET
+    play_start_hour_et: 2,
+    play_end_hour_et: 15,
+  },
 ];
 
 // ─── Active major ──────────────────────────────────────────────────────────────
 // Change this ID to switch to the next major. Everything else routes
 // automatically based on the MajorConfig above.
 
-export const ACTIVE_MAJOR_ID = "us_open_2026";
+export const ACTIVE_MAJOR_ID = "the_open_2026";
 
 export const ACTIVE_MAJOR: MajorConfig =
   ALL_MAJORS.find((m) => m.id === ACTIVE_MAJOR_ID) ?? ALL_MAJORS[0];

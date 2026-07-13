@@ -1,6 +1,6 @@
 import axios from "axios";
 import { GolferScore, LeaderboardSnapshot, TournamentPhase } from "../types";
-import { ACTIVE_MAJOR } from "../lib/major-config";
+import { ACTIVE_MAJOR, MajorConfig } from "../lib/major-config";
 
 const GRAPHQL_URL = "https://orchestrator.pgatour.com/graphql";
 const API_KEY = "da2-gsrx5bibzbb4njvhl7t37wqyl4";
@@ -23,7 +23,14 @@ function parseRoundScore(s: string): number {
   return parseInt(s, 10) || 0;
 }
 
-function mapPlayerState(state: string): GolferScore["status"] {
+function mapPlayerState(state: string, position: string): GolferScore["status"] {
+  // Once a tournament completes, playerState becomes "COMPLETE" for everyone —
+  // including cut/withdrawn players. The position string keeps the real outcome,
+  // so check it first.
+  const pos = (position ?? "").trim().toUpperCase();
+  if (pos === "CUT") return "cut";
+  if (pos === "WD")  return "wd";
+  if (pos === "DQ")  return "dq";
   switch (state) {
     case "CUT":          return "cut";
     case "WITHDRAWN":    return "wd";
@@ -46,13 +53,21 @@ function determinePhase(
 }
 
 export async function fetchLeaderboard(): Promise<LeaderboardSnapshot> {
-  const tournamentId = TOURNAMENT_IDS[ACTIVE_MAJOR.id];
+  return fetchLeaderboardForMajor(ACTIVE_MAJOR);
+}
+
+// Fetch any major's leaderboard (used by the backfill/archive tooling to pull
+// final results for completed majors that are no longer the active one).
+export async function fetchLeaderboardForMajor(
+  major: Pick<MajorConfig, "id" | "name" | "start_date">
+): Promise<LeaderboardSnapshot> {
+  const tournamentId = TOURNAMENT_IDS[major.id];
 
   // Before tournament start, return a pre-tournament snapshot
   const todayUtc = new Date().toISOString().slice(0, 10);
-  if (todayUtc < ACTIVE_MAJOR.start_date || !tournamentId) {
+  if (todayUtc < major.start_date || !tournamentId) {
     return {
-      tournament_name: ACTIVE_MAJOR.name,
+      tournament_name: major.name,
       phase: "pre",
       current_round: 0,
       cut_line: null,
@@ -132,7 +147,7 @@ export async function fetchLeaderboard(): Promise<LeaderboardSnapshot> {
       const roundScores: number[] = Array.isArray(s.rounds)
         ? s.rounds.map((r: string) => parseRoundScore(r))
         : [0, 0, 0, 0];
-      const status = mapPlayerState(s.playerState);
+      const status = mapPlayerState(s.playerState, s.position ?? "");
 
       return {
         espn_id: row.id,
@@ -151,7 +166,7 @@ export async function fetchLeaderboard(): Promise<LeaderboardSnapshot> {
     });
 
   return {
-    tournament_name: ACTIVE_MAJOR.name,
+    tournament_name: major.name,
     phase,
     current_round: currentRound,
     cut_line: null,

@@ -6,7 +6,8 @@
     "dev": "nodemon --exec ts-node src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "poll": "ts-node src/poller.ts"
+    "poll": "ts-node src/poller.ts",
+    "backfill:2026": "ts-node src/scripts/backfill-2026-cli.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",

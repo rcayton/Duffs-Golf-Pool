@@ -38,7 +38,7 @@ export function PotBreakdown({ data }: Props) {
           <div style={{ fontSize: 13, fontWeight: 600 }}>Pot breakdown</div>
         </div>
         {[
-          { label: `PGA Championship 2026 dues (${pool_players.length} × $10)`, value: pot.base_dues },
+          { label: `${data.snapshot.tournament_name} dues (${pool_players.length} × $10)`, value: pot.base_dues },
           ...(pot.rollover_total > 0
             ? [{ label: pot.rollover_label, value: pot.rollover_total }]
             : []),
@@ -131,7 +131,7 @@ export function PotBreakdown({ data }: Props) {
         border: "1px solid var(--border)",
       }}>
         <strong style={{ color: "var(--text-primary)" }}>Rules:</strong>{" "}
-        Each player contributes $10 for the PGA Championship. $5 is added to the pot for each golfer who misses the cut.
+        Each player contributes $10 per major. $5 is added to the pot for each golfer who misses the cut.
         The player who picked the tournament winner takes the entire pot.
         If no pool member's golfer wins, the pot rolls over to the next major.
       </div>

@@ -18,6 +18,7 @@ import {
   resetDraft,
 } from "../lib/draft";
 import { fetchPgaField, clearFieldCache } from "../services/pga-field";
+import { runBackfill2026 } from "../lib/backfill-2026";
 
 export const router = Router();
 
@@ -195,6 +196,19 @@ router.post("/draft/complete", async (_req: Request, res: Response) => {
     const { state, error } = await completeDraft();
     if (error) return res.status(400).json({ error, state });
     return res.json(state);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/backfill-2026    (?dry_run=1 to compute without writing)
+// One-off: archives the 2026 PGA Championship + U.S. Open with real picks,
+// pots, and the U.S. Open pool winner. Idempotent.
+router.post("/admin/backfill-2026", async (req: Request, res: Response) => {
+  try {
+    const dryRun = req.query.dry_run === "1" || req.query.dry_run === "true";
+    const result = await runBackfill2026({ dryRun });
+    return res.json(result);
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

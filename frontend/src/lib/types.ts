@@ -83,7 +83,7 @@ export interface MajorInfo {
   short_name: string;
   year: number;
   dates: string;
-  source: "masters" | "espn";
+  source: "masters" | "espn" | "pgatour";
   is_active: boolean;
   is_archived: boolean;
   archive_summary: {

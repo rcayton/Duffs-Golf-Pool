@@ -2,7 +2,7 @@ import { PoolPlayer } from "../types";
 
 // ─── Pool configuration ────────────────────────────────────────────────────────
 // Edit this file to update picks or player info before each major.
-// dues_owed = U.S. Open $10 per player.
+// dues_owed = $10 per player per major (currently The Open Championship 2026).
 // Picks are sourced live from the draft (Supabase pool_picks) — the "TBD"
 // placeholders below are only the pre-draft fallback.
 
@@ -93,22 +93,20 @@ export const POOL_PLAYERS: PoolPlayer[] = [
   },
 ];
 
-// Pot breakdown — no one picked the PGA Championship winner (Aaron Rai, −9),
-// so the entire PGA pot rolls into the U.S. Open.
-// Base PGA dues = 7 players × $10 = $70 → recorded as $10 per player below.
-// If PGA cut-penalty money should also carry over, bump these per-player amounts
-// so they sum to the full archived PGA pot total.
+// Pot breakdown — Buer won the 2026 U.S. Open (picked champion Wyndham Clark),
+// taking the entire pot including the PGA Championship rollover.
+// The pot therefore resets to $0 rollover for The Open Championship 2026.
 export const POT_CONFIG = {
   dues_per_player: 10,
   cut_penalty: 5,
-  rollover_label: "PGA Championship 2026 rollover",
+  rollover_label: "Rollover",
   rollovers: {
-    sullivan: { pga_2026: 10 },
-    mikael:   { pga_2026: 10 },
-    mike:     { pga_2026: 10 },
-    buer:     { pga_2026: 10 },
-    robbie:   { pga_2026: 10 },
-    caleb:    { pga_2026: 10 },
-    alex:     { pga_2026: 10 },
+    sullivan: { us_open_2026: 0 },
+    mikael:   { us_open_2026: 0 },
+    mike:     { us_open_2026: 0 },
+    buer:     { us_open_2026: 0 },
+    robbie:   { us_open_2026: 0 },
+    caleb:    { us_open_2026: 0 },
+    alex:     { us_open_2026: 0 },
   } as Record<string, Record<string, number>>,
 };

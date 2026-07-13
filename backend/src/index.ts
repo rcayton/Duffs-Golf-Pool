@@ -19,8 +19,8 @@ const PORT = parseInt(process.env.PORT ?? "3001", 10);
 
 const LEADERBOARD_INTERVAL = parseInt(process.env.POLL_INTERVAL_MINUTES ?? "5", 10);
 const ODDS_INTERVAL_MINUTES = 10;
-const PLAY_START_HOUR_ET = 8;
-const PLAY_END_HOUR_ET   = 19;
+const PLAY_START_HOUR_ET = ACTIVE_MAJOR.play_start_hour_et ?? 8;
+const PLAY_END_HOUR_ET   = ACTIVE_MAJOR.play_end_hour_et ?? 19;
 const TOKEN_FLOOR = parseInt(process.env.ODDS_TOKEN_FLOOR ?? "20", 10);
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
