@@ -12,5 +12,8 @@ export interface PaymentLinks {
 }
 
 export const PAYMENT_LINKS: Record<string, PaymentLinks> = {
-  // buer: { venmo: "https://venmo.com/u/...", cashapp: "https://cash.app/$..." },
+  buer: {
+    venmo: "https://venmo.com/u/lukebuer",     // @lukebuer
+    cashapp: "https://cash.app/$LukeBuer",     // $LukeBuer
+  },
 };
