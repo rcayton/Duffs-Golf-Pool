@@ -555,6 +555,266 @@ function RoundGroup({ round, picks, field, allPicks, isComplete, onSave }: Round
   );
 }
 
+// ─── FieldPanel ────────────────────────────────────────────────────────────────
+// Right-hand list of every golfer in the tournament field. Clicking an
+// available golfer (while the draft is in progress) asks for confirmation,
+// then drafts them to whichever pick is currently on the clock.
+
+interface FieldPanelProps {
+  field:    string[];
+  picks:    DraftPickRecord[];
+  status:   string;
+  onDraft:  (pickNumber: number, golferName: string) => Promise<string | null>;
+}
+
+function FieldPanel({ field, picks, status, onDraft }: FieldPanelProps) {
+  const [query,   setQuery]   = useState("");
+  const [pending, setPending] = useState<string | null>(null);
+  const [saving,  setSaving]  = useState(false);
+  const [error,   setError]   = useState<string | null>(null);
+
+  // Next unfilled pick = on the clock (picks arrive sorted by pick_number)
+  const onClock = picks.find((p) => !p.golfer_name) ?? null;
+  const canDraft = status === "in_progress" && !!onClock;
+
+  // If the on-clock pick changes underneath us (another client drafted),
+  // drop the pending confirmation so nothing lands on the wrong slot.
+  useEffect(() => {
+    setPending(null);
+    setError(null);
+  }, [onClock?.pick_number]);
+
+  // normalized golfer name → the pick that drafted them
+  const draftedBy = useMemo(() => {
+    const m = new Map<string, DraftPickRecord>();
+    picks.forEach((p) => {
+      if (p.golfer_name) m.set(normalizeName(p.golfer_name), p);
+    });
+    return m;
+  }, [picks]);
+
+  const filtered = useMemo(() => {
+    const q = normalizeName(query);
+    return q ? field.filter((n) => normalizeName(n).includes(q)) : field;
+  }, [field, query]);
+
+  const availableCount = field.filter((n) => !draftedBy.has(normalizeName(n))).length;
+
+  const handleConfirm = async () => {
+    if (!pending || !onClock) return;
+    setSaving(true);
+    setError(null);
+    const err = await onDraft(onClock.pick_number, pending);
+    setSaving(false);
+    if (err) {
+      setError(err);
+    } else {
+      setPending(null);
+      setQuery("");
+    }
+  };
+
+  const onClockColor = onClock ? (PLAYER_COLORS[onClock.player_id] ?? "#5a5a55") : "#5a5a55";
+  const onClockBg    = onClock ? (PLAYER_BG_COLORS[onClock.player_id] ?? "#F1EFE8") : "#F1EFE8";
+
+  return (
+    <div style={{
+      background: "var(--bg-card)",
+      border: "1px solid var(--border)",
+      borderRadius: "var(--radius-lg)",
+      boxShadow: "var(--shadow-card)",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      maxHeight: "80vh",
+      position: "sticky",
+      top: 12,
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: "12px 14px",
+        borderBottom: "1px solid var(--border)",
+        background: "var(--bg-surface)",
+      }}>
+        <div style={{ fontSize: 14, fontWeight: 600 }}>Player Pool</div>
+        <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 1 }}>
+          {availableCount} of {field.length} available
+        </div>
+      </div>
+
+      {/* On the clock banner */}
+      {canDraft && onClock && (
+        <div style={{
+          padding: "9px 14px",
+          background: onClockBg,
+          borderBottom: "1px solid var(--border)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          fontSize: 13,
+        }}>
+          <span style={{
+            width: 22, height: 22, borderRadius: "50%",
+            background: onClockColor, color: "#fff",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 11, fontWeight: 700, flexShrink: 0,
+          }}>
+            {onClock.player_name[0]}
+          </span>
+          <span style={{ color: "var(--text-primary)" }}>
+            <strong>{onClock.player_name}</strong> is on the clock
+          </span>
+          <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+            Pick #{onClock.pick_number} · R{onClock.round}
+          </span>
+        </div>
+      )}
+      {status === "in_progress" && !onClock && (
+        <div style={{
+          padding: "9px 14px", fontSize: 13, color: "#0F6E56",
+          background: "#E1F5EE", borderBottom: "1px solid var(--border)",
+        }}>
+          All 28 picks filled — hit “Draft Complete” below the board.
+        </div>
+      )}
+
+      {/* Confirmation bar */}
+      {pending && canDraft && onClock && (
+        <div style={{
+          padding: "10px 14px",
+          background: "var(--masters-green)",
+          color: "#fff",
+          borderBottom: "1px solid var(--border)",
+        }}>
+          <div style={{ fontSize: 13, marginBottom: 8 }}>
+            Draft <strong>{pending}</strong> for <strong>{onClock.player_name}</strong>{" "}
+            (Pick #{onClock.pick_number}, Round {onClock.round})?
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={handleConfirm}
+              disabled={saving}
+              style={{
+                flex: 1, padding: "7px 0",
+                background: "#fff", color: "var(--masters-green)",
+                border: "none", borderRadius: "var(--radius-sm)",
+                fontSize: 13, fontWeight: 700,
+                cursor: saving ? "wait" : "pointer",
+              }}
+            >
+              {saving ? "Drafting…" : "✓ Confirm"}
+            </button>
+            <button
+              onClick={() => { setPending(null); setError(null); }}
+              disabled={saving}
+              style={{
+                flex: 1, padding: "7px 0",
+                background: "rgba(255,255,255,0.18)", color: "#fff",
+                border: "1px solid rgba(255,255,255,0.4)", borderRadius: "var(--radius-sm)",
+                fontSize: 13, fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+          {error && (
+            <div style={{
+              marginTop: 8, fontSize: 12, padding: "6px 8px",
+              background: "rgba(255,255,255,0.92)", color: "#791F1F",
+              borderRadius: "var(--radius-sm)",
+            }}>
+              {error}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Search */}
+      <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border)" }}>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search players…"
+          autoComplete="off"
+          style={{
+            width: "100%",
+            padding: "8px 10px",
+            fontSize: 16, // prevents iOS auto-zoom
+            border: "1.5px solid var(--border-strong)",
+            borderRadius: "var(--radius-sm)",
+            background: "var(--bg-card)",
+            color: "var(--text-primary)",
+            outline: "none",
+            boxSizing: "border-box",
+          }}
+        />
+      </div>
+
+      {/* Golfer list */}
+      <div style={{ overflowY: "auto", WebkitOverflowScrolling: "touch", flex: 1 }}>
+        {filtered.length === 0 && (
+          <div style={{ padding: "1.5rem", textAlign: "center", fontSize: 13, color: "var(--text-tertiary)" }}>
+            No players match “{query}”.
+          </div>
+        )}
+        {filtered.map((name) => {
+          const takenBy = draftedBy.get(normalizeName(name));
+          const isPending = pending === name;
+          const clickable = canDraft && !takenBy && !saving;
+          const takenColor = takenBy ? (PLAYER_COLORS[takenBy.player_id] ?? "#5a5a55") : undefined;
+
+          return (
+            <div
+              key={name}
+              onClick={() => { if (clickable) { setPending(name); setError(null); } }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+                padding: "9px 14px",
+                minHeight: 40,
+                borderBottom: "1px solid var(--border)",
+                cursor: clickable ? "pointer" : "default",
+                background: isPending ? "var(--bg-surface-2)" : "transparent",
+                opacity: takenBy ? 0.5 : 1,
+                boxSizing: "border-box",
+              }}
+            >
+              <span style={{
+                fontSize: 14,
+                color: "var(--text-primary)",
+                textDecoration: takenBy ? "line-through" : "none",
+                fontWeight: isPending ? 700 : 400,
+              }}>
+                {name}
+              </span>
+              {takenBy ? (
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  fontSize: 11, fontWeight: 600, color: takenColor,
+                  whiteSpace: "nowrap", flexShrink: 0,
+                }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: "50%",
+                    background: takenColor, display: "inline-block",
+                  }} />
+                  {takenBy.player_name} · #{takenBy.pick_number}
+                </span>
+              ) : clickable ? (
+                <span style={{ fontSize: 12, color: "var(--text-tertiary)", flexShrink: 0 }}>
+                  {isPending ? "selected" : "draft →"}
+                </span>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Draft (main export) ───────────────────────────────────────────────────────
 
 interface DraftProps {
@@ -736,9 +996,21 @@ export function Draft({ onPicksChanged }: DraftProps) {
         </div>
       )}
 
-      {/* Draft table — only shown once lottery has run and animation is done */}
+      {/* Draft board (left) + player pool (right) — once lottery has run */}
       {status !== "idle" && picks.length > 0 && animPhase === "idle" && (
-        <>
+        <div className="draft-layout">
+          <style>{`
+            .draft-layout {
+              display: grid;
+              grid-template-columns: minmax(0, 1fr) 340px;
+              gap: 1.25rem;
+              align-items: start;
+            }
+            @media (max-width: 900px) {
+              .draft-layout { grid-template-columns: 1fr; }
+            }
+          `}</style>
+          <div style={{ minWidth: 0 }}>
           <div style={{
             background: "var(--bg-card)",
             border: "1px solid var(--border)",
@@ -865,8 +1137,16 @@ export function Draft({ onPicksChanged }: DraftProps) {
               )}
             </div>
           )}
+          </div>
 
-        </>
+          {/* Player pool — click a golfer, confirm, drafted to the pick on the clock */}
+          <FieldPanel
+            field={field}
+            picks={picks}
+            status={status}
+            onDraft={handleSavePick}
+          />
+        </div>
       )}
     </div>
   );
