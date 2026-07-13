@@ -131,7 +131,7 @@ export default function App() {
                 : "No archived data found for this major."}
             </div>
           )}
-          {!archiveLoading && archive && <ArchivedPicks archive={archive} />}
+          {!archiveLoading && archive && <ArchivedPicks archive={archive} majors={majors} />}
         </main>
       </>
     );

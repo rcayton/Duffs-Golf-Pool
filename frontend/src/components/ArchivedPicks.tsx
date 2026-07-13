@@ -1,8 +1,167 @@
-import { MajorArchive, EnrichedPoolPlayer } from "../lib/types";
+import { useState, useEffect } from "react";
+import { MajorArchive, MajorInfo, EnrichedPoolPlayer } from "../lib/types";
+import { fetchMajorArchive } from "../lib/api";
 import { formatScore, scoreClass, PLAYER_COLORS, PLAYER_BG_COLORS } from "../lib/utils";
 
 interface Props {
   archive: MajorArchive;
+  majors?: MajorInfo[];
+}
+
+// ─── WinnerPayouts ─────────────────────────────────────────────────────────────
+// Shown when a pool member won this major. Lists what each person owes the
+// winner: their dues + cut penalties for THIS major, plus their contributions
+// to any immediately-preceding majors whose pots rolled over into this one
+// (walked back through the majors list until a major with a winner is hit).
+
+function contribution(a: MajorArchive, playerId: string): number {
+  const p = a.pool_players.find((pp) => pp.id === playerId);
+  return p ? p.dues_owed + p.cut_penalties * 5 : 0;
+}
+
+function WinnerPayouts({ archive, majors }: { archive: MajorArchive; majors: MajorInfo[] }) {
+  // Rolled-over predecessor archives, oldest first
+  const [chain, setChain] = useState<MajorArchive[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const prior: MajorArchive[] = [];
+      // majors comes from /api/majors in config (chronological) order
+      const idx = majors.findIndex((m) => m.id === archive.major_id);
+      for (let i = idx - 1; i >= 0; i--) {
+        const m = majors[i];
+        if (!m.is_archived || m.archive_summary?.winner_id) break; // chain ends at the last win
+        const a = await fetchMajorArchive(m.id);
+        if (!a) break;
+        prior.unshift(a);
+      }
+      if (!cancelled) setChain(prior);
+    })();
+    return () => { cancelled = true; };
+  }, [archive.major_id, majors]);
+
+  const winner = archive.pool_players.find((p) => p.id === archive.winner_id);
+  if (!winner) return null;
+
+  if (chain === null) {
+    return (
+      <div style={{
+        background: "var(--bg-card)", borderRadius: "var(--radius-lg)",
+        border: "1px solid var(--border)", boxShadow: "var(--shadow-card)",
+        padding: "12px 14px", fontSize: 13, color: "var(--text-secondary)",
+      }}>
+        Calculating payouts…
+      </div>
+    );
+  }
+
+  const allMajors = [...chain, archive]; // oldest → this one
+  const rows = archive.pool_players
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      parts: allMajors.map((a) => ({
+        label: a.short_name,
+        amount: contribution(a, p.id),
+      })),
+    }))
+    .map((r) => ({ ...r, total: r.parts.reduce((s, x) => s + x.amount, 0) }));
+
+  const owedRows = rows
+    .filter((r) => r.id !== winner.id)
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+  const winnerRow = rows.find((r) => r.id === winner.id);
+  const owedTotal = owedRows.reduce((s, r) => s + r.total, 0);
+  const winnerColor = PLAYER_COLORS[winner.id] ?? "#5a5a55";
+
+  const breakdown = (parts: { label: string; amount: number }[]) =>
+    parts.length > 1
+      ? parts.map((p) => `$${p.amount} ${p.label}`).join(" + ")
+      : null;
+
+  return (
+    <div style={{
+      background: "var(--bg-card)",
+      borderRadius: "var(--radius-lg)",
+      border: "1px solid var(--border)",
+      boxShadow: "var(--shadow-card)",
+      overflow: "hidden",
+    }}>
+      <div style={{
+        padding: "12px 14px",
+        borderBottom: "1px solid var(--border)",
+        background: "var(--bg-surface)",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        flexWrap: "wrap", gap: 6,
+      }}>
+        <div style={{ fontSize: 14, fontWeight: 600 }}>
+          💰 Payouts — pay {winner.name}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+          Dues + cut penalties{chain.length > 0 ? " incl. rolled-over majors" : ""}
+        </div>
+      </div>
+
+      {owedRows.map((r) => {
+        const color = PLAYER_COLORS[r.id] ?? "#5a5a55";
+        const bg = PLAYER_BG_COLORS[r.id] ?? "#F1EFE8";
+        return (
+          <div key={r.id} style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "9px 14px",
+            borderBottom: "1px solid var(--border)",
+          }}>
+            <div style={{
+              width: 24, height: 24, borderRadius: "50%",
+              background: color, color: "#fff",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 11, fontWeight: 700, flexShrink: 0,
+            }}>
+              {r.name[0]}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>{r.name}</div>
+              {breakdown(r.parts) && (
+                <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
+                  {breakdown(r.parts)}
+                </div>
+              )}
+            </div>
+            <span style={{
+              fontSize: 14, fontWeight: 700,
+              padding: "2px 10px", borderRadius: "var(--radius-sm)",
+              background: bg, color,
+            }}>
+              ${r.total}
+            </span>
+          </div>
+        );
+      })}
+
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: "10px 14px", fontSize: 13, fontWeight: 600,
+        borderBottom: "1px solid var(--border)",
+      }}>
+        <span>Total owed to {winner.name}</span>
+        <span style={{ color: winnerColor }}>${owedTotal}</span>
+      </div>
+
+      {winnerRow && (
+        <div style={{
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          padding: "8px 14px", fontSize: 12, color: "var(--text-secondary)",
+        }}>
+          <span>
+            {winner.name}'s own contribution (already in the pot
+            {breakdown(winnerRow.parts) ? `: ${breakdown(winnerRow.parts)}` : ""})
+          </span>
+          <span>${winnerRow.total}</span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function CutBadge({ status }: { status: string }) {
@@ -119,7 +278,7 @@ function PickCard({ player, isWinner }: { player: EnrichedPoolPlayer; isWinner: 
   );
 }
 
-export function ArchivedPicks({ archive }: Props) {
+export function ArchivedPicks({ archive, majors = [] }: Props) {
   const { pool_players, winner_id, pot_total, snapshot } = archive;
 
   return (
@@ -152,6 +311,9 @@ export function ArchivedPicks({ archive }: Props) {
           )}
         </div>
       </div>
+
+      {/* Payout summary — only when a pool member won this major */}
+      {winner_id && <WinnerPayouts archive={archive} majors={majors} />}
 
       {/* Tournament winner */}
       {(() => {
