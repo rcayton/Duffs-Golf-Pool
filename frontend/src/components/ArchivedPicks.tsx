@@ -1,7 +1,34 @@
 import { useState, useEffect } from "react";
 import { MajorArchive, MajorInfo, EnrichedPoolPlayer } from "../lib/types";
 import { fetchMajorArchive } from "../lib/api";
+import { PAYMENT_LINKS } from "../lib/payments";
 import { formatScore, scoreClass, PLAYER_COLORS, PLAYER_BG_COLORS } from "../lib/utils";
+
+// Branded external-link button for Venmo / Cash App
+function PayButton({ href, label, background }: { href: string; label: string; background: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 5,
+        padding: "5px 12px",
+        borderRadius: 16,
+        background,
+        color: "#fff",
+        fontSize: 12,
+        fontWeight: 700,
+        textDecoration: "none",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {label} ↗
+    </a>
+  );
+}
 
 interface Props {
   archive: MajorArchive;
@@ -74,6 +101,7 @@ function WinnerPayouts({ archive, majors }: { archive: MajorArchive; majors: Maj
   const winnerRow = rows.find((r) => r.id === winner.id);
   const owedTotal = owedRows.reduce((s, r) => s + r.total, 0);
   const winnerColor = PLAYER_COLORS[winner.id] ?? "#5a5a55";
+  const payLinks = PAYMENT_LINKS[winner.id];
 
   const breakdown = (parts: { label: string; amount: number }[]) =>
     parts.length > 1
@@ -93,14 +121,26 @@ function WinnerPayouts({ archive, majors }: { archive: MajorArchive; majors: Maj
         borderBottom: "1px solid var(--border)",
         background: "var(--bg-surface)",
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        flexWrap: "wrap", gap: 6,
+        flexWrap: "wrap", gap: 8,
       }}>
-        <div style={{ fontSize: 14, fontWeight: 600 }}>
-          💰 Payouts — pay {winner.name}
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>
+            💰 Payouts — pay {winner.name}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+            Dues + cut penalties{chain.length > 0 ? " incl. rolled-over majors" : ""}
+          </div>
         </div>
-        <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-          Dues + cut penalties{chain.length > 0 ? " incl. rolled-over majors" : ""}
-        </div>
+        {(payLinks?.venmo || payLinks?.cashapp) && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {payLinks.venmo && (
+              <PayButton href={payLinks.venmo} label="Venmo" background="#008CFF" />
+            )}
+            {payLinks.cashapp && (
+              <PayButton href={payLinks.cashapp} label="Cash App" background="#00C244" />
+            )}
+          </div>
+        )}
       </div>
 
       {owedRows.map((r) => {
