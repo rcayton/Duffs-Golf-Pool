@@ -90,9 +90,20 @@ export function Leaderboard({ players, poolPlayers, cutLine, projectedCut, phase
     ? players.filter((p) => findOwner(p, ownerMap) !== null)
     : players;
 
-  // Grid: dot | pos | name | [R1..Rn] | total | thru | owner
-  const roundColWidths = Array(numRounds).fill("38px").join(" ");
-  const gridCols = `8px 44px 1fr${numRounds > 0 ? ` ${roundColWidths}` : ""} 52px 44px 90px`;
+  // Grid: dot | pos | name | total | thru | [R1..Rn] | owner
+  // On narrow screens the round columns are hidden (.lb-round-col), so the
+  // media query drops their tracks too — otherwise the name column collapses.
+  const gridCss = `
+    .lb-grid {
+      display: grid;
+      grid-template-columns: 8px 44px minmax(0,1fr) 52px 44px${numRounds > 0 ? ` repeat(${numRounds}, 34px)` : ""} 90px;
+      gap: 4px;
+      align-items: center;
+    }
+    @media (max-width: 540px) {
+      .lb-grid { grid-template-columns: 8px 36px minmax(0,1fr) 46px 36px 76px; }
+    }
+  `;
 
   let lastPos = "";
 
@@ -136,9 +147,10 @@ export function Leaderboard({ players, poolPlayers, cutLine, projectedCut, phase
         )}
       </div>
 
+      <style>{gridCss}</style>
+
       {/* Column headers */}
-      <div style={{
-        display: "grid", gridTemplateColumns: gridCols, gap: 4,
+      <div className="lb-grid" style={{
         padding: "6px 14px", fontSize: 11, color: "var(--text-tertiary)",
         borderBottom: "1px solid var(--border)",
         textTransform: "uppercase", letterSpacing: "0.04em",
@@ -146,6 +158,8 @@ export function Leaderboard({ players, poolPlayers, cutLine, projectedCut, phase
         <span />
         <span>Pos</span>
         <span>Player</span>
+        <span style={{ textAlign: "right" }}>Score</span>
+        <span style={{ textAlign: "right" }}>Thru</span>
         {Array.from({ length: numRounds }, (_, i) => {
           const r = i + 1;
           const isActive = r === currentRound && phase !== "complete";
@@ -155,6 +169,7 @@ export function Leaderboard({ players, poolPlayers, cutLine, projectedCut, phase
               className="lb-round-col"
               style={{
                 textAlign: "right",
+                fontSize: 10,
                 color: isActive ? "var(--masters-green)" : undefined,
                 fontWeight: isActive ? 700 : undefined,
               }}
@@ -163,8 +178,6 @@ export function Leaderboard({ players, poolPlayers, cutLine, projectedCut, phase
             </span>
           );
         })}
-        <span style={{ textAlign: "right" }}>Score</span>
-        <span style={{ textAlign: "right" }}>Thru</span>
         <span style={{ textAlign: "center" }}>Owner</span>
       </div>
 
@@ -198,9 +211,7 @@ export function Leaderboard({ players, poolPlayers, cutLine, projectedCut, phase
                 ✂ {cutLabel} ({formatScore(displayCut!)})
               </div>
             )}
-            <div style={{
-              display: "grid", gridTemplateColumns: gridCols,
-              gap: 4, alignItems: "center",
+            <div className="lb-grid" style={{
               padding: "6px 14px",
               borderBottom: "1px solid var(--border)",
               background: i % 2 === 0 ? "transparent" : "var(--bg-surface)",
@@ -228,7 +239,20 @@ export function Leaderboard({ players, poolPlayers, cutLine, projectedCut, phase
                 {golfer.name}
               </span>
 
-              {/* Round score columns */}
+              {/* Total score */}
+              <span
+                className={scoreClass(golfer.score_to_par)}
+                style={{ fontSize: 14, fontWeight: 600, textAlign: "right" }}
+              >
+                {formatScore(golfer.score_to_par)}
+              </span>
+
+              {/* Thru */}
+              <span style={{ fontSize: 12, color: "var(--text-secondary)", textAlign: "right" }}>
+                {golfer.thru === "F" ? "F" : golfer.thru === "-" ? "—" : golfer.thru}
+              </span>
+
+              {/* Round score columns (smaller, secondary) */}
               {Array.from({ length: numRounds }, (_, idx) => {
                 const r = idx + 1;
                 const cell = getRoundCell(r, golfer, currentRound, phase);
@@ -238,7 +262,7 @@ export function Leaderboard({ players, poolPlayers, cutLine, projectedCut, phase
                     key={r}
                     className={`lb-round-col ${cell.type === "topar" ? scoreClass(cell.scoreVal) : ""}`}
                     style={{
-                      fontSize: 12,
+                      fontSize: 10.5,
                       textAlign: "right",
                       color: cell.type === "empty"
                         ? "var(--text-tertiary)"
@@ -252,19 +276,6 @@ export function Leaderboard({ players, poolPlayers, cutLine, projectedCut, phase
                   </span>
                 );
               })}
-
-              {/* Total score */}
-              <span
-                className={scoreClass(golfer.score_to_par)}
-                style={{ fontSize: 13, textAlign: "right" }}
-              >
-                {formatScore(golfer.score_to_par)}
-              </span>
-
-              {/* Thru */}
-              <span style={{ fontSize: 12, color: "var(--text-secondary)", textAlign: "right" }}>
-                {golfer.thru === "F" ? "F" : golfer.thru === "-" ? "—" : golfer.thru}
-              </span>
 
               {/* Owner badge */}
               <div style={{ display: "flex", justifyContent: "center" }}>
