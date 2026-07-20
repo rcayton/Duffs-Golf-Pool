@@ -11,6 +11,11 @@ export const TOURNAMENT_IDS: Record<string, string> = {
   pga_2026: "R2026033",
   us_open_2026: "R2026026",
   the_open_2026: "R2026100",
+  // The Masters is PGA Tour event 014. The 2027 tournament isn't published in
+  // the API yet (verified 9 months out) — confirm this id once the PGA Tour
+  // posts the 2027 schedule. Until start_date, the leaderboard returns the
+  // pre-tournament state regardless, so this id being unpublished is harmless.
+  masters_2027: "R2027014",
 };
 
 function parseTotalStr(s: string): number {

@@ -69,13 +69,27 @@ export const ALL_MAJORS: MajorConfig[] = [
     play_start_hour_et: 2,
     play_end_hour_et: 15,
   },
+  {
+    id: "masters_2027",
+    name: "2027 Masters Tournament",
+    short_name: "2027 Masters",
+    year: 2027,
+    dates: "April 8–11, 2027",
+    start_date: "2027-04-08",
+    // Uses the PGA Tour feed (full-field leaderboard + draft field query), same
+    // as the last three majors. masters.com's scores.json is Augusta's own feed
+    // but is hardcoded to a single year and has no pre-tournament/field support,
+    // so it's not usable this far out. Revisit closer to the event if desired.
+    source: "pgatour",
+    odds_market_key: "golf_masters_tournament_winner",
+  },
 ];
 
 // ─── Active major ──────────────────────────────────────────────────────────────
 // Change this ID to switch to the next major. Everything else routes
 // automatically based on the MajorConfig above.
 
-export const ACTIVE_MAJOR_ID = "the_open_2026";
+export const ACTIVE_MAJOR_ID = "masters_2027";
 
 export const ACTIVE_MAJOR: MajorConfig =
   ALL_MAJORS.find((m) => m.id === ACTIVE_MAJOR_ID) ?? ALL_MAJORS[0];

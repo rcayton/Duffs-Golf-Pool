@@ -1,5 +1,5 @@
 // ─── Historical selection results ─────────────────────────────────────────────
-// Baseline figures through the 2026 U.S. Open (pre-Open Championship 2026).
+// Baseline figures through the 2026 Open Championship (pre-2027 Masters).
 // money_won / money_lost in whole dollars. win_majors lists the tournament
 // names for each win. These are never mutated at runtime — the leaderboard
 // component adds the current tournament on top when the phase is "complete".
@@ -22,6 +22,13 @@
 //   Pot: $220 ($70 base + $40 cut penalties + $110 PGA rollover)
 //   Missed cuts: Koepka (mikael), Spaun (mike), Rahm + Reed (buer),
 //                Si Woo Kim + Hovland (robbie), DeChambeau + Cantlay (caleb)
+//
+// The Open Championship 2026 (baked in):
+//   Winner: none — Ryan Fox (−10) unpicked, pot ($105) rolled into 2027 Masters
+//   Pot: $105 ($70 base + $35 cut penalties, 7 missed cuts)
+//   Missed cuts (7): Wyndham Clark + Joaquin Niemann (mikael), Tom Kim (mike),
+//                Jordan Spieth (buer),
+//                Matt Fitzpatrick + Viktor Hovland + Justin Rose (robbie)
 
 export interface PlayerHistory {
   id: string;         // matches PoolPlayer.id
@@ -36,9 +43,9 @@ export const PLAYER_HISTORY: PlayerHistory[] = [
   {
     id: "robbie",
     wins: 4,
-    entries: 16,
+    entries: 17,
     money_won: 485,
-    money_lost: 235,   // +$15 PGA (1 cut) +$20 US Open (2 cuts)
+    money_lost: 260,   // +$25 Open (3 cuts)
     win_majors: [
       "Masters 2023",
       "The Open Championship 2024",
@@ -49,49 +56,49 @@ export const PLAYER_HISTORY: PlayerHistory[] = [
   {
     id: "buer",
     wins: 3,
-    entries: 16,
+    entries: 17,
     money_won: 400,    // +$220 U.S. Open 2026 pot win
-    money_lost: 245,   // +$15 PGA (1 cut) +$20 US Open (2 cuts)
+    money_lost: 260,   // +$15 Open (1 cut)
     win_majors: ["US Open 2024", "Masters 2025", "U.S. Open 2026"],
   },
   {
     id: "mike",
     wins: 3,
-    entries: 16,
+    entries: 17,
     money_won: 445,
-    money_lost: 265,   // +$20 PGA (2 cuts) +$15 US Open (1 cut)
+    money_lost: 280,   // +$15 Open (1 cut)
     win_majors: ["PGA Championship 2023", "2024 Olympics", "Masters 2026"],
   },
   {
     id: "alex",
     wins: 1,
-    entries: 15,
+    entries: 16,
     money_won: 165,
-    money_lost: 240,   // +$10 PGA (no cuts) +$10 US Open (no cuts)
+    money_lost: 250,   // +$10 Open (no cuts)
     win_majors: ["The Open Championship 2023"],
   },
   {
     id: "caleb",
     wins: 1,
-    entries: 16,
+    entries: 17,
     money_won: 85,
-    money_lost: 260,   // +$15 PGA (1 cut) +$20 US Open (2 cuts)
+    money_lost: 270,   // +$10 Open (no cuts)
     win_majors: ["Masters 2024"],
   },
   {
     id: "mikael",
     wins: 1,
-    entries: 13,
+    entries: 14,
     money_won: 85,
-    money_lost: 205,   // +$20 PGA (2 cuts) +$15 US Open (1 cut)
+    money_lost: 225,   // +$20 Open (2 cuts)
     win_majors: ["PGA Championship 2024"],
   },
   {
     id: "sullivan",
     wins: 0,
-    entries: 12,
+    entries: 13,
     money_won: 0,
-    money_lost: 230,   // +$15 PGA (1 cut) +$10 US Open (no cuts)
+    money_lost: 240,   // +$10 Open (no cuts)
     win_majors: [],
   },
 ];

@@ -19,14 +19,13 @@ interface ChartRow {
   [playerId: string]: number;
 }
 
-// The Open Championship 2026 round start times (Royal Birkdale — early UK
-// tee times land overnight/morning ET). Used to draw reference lines and
-// label the X axis by round.
+// 2027 Masters round start times (Augusta National, ET). Used to draw
+// reference lines and label the X axis by round.
 const ROUND_STARTS: { label: string; iso: string }[] = [
-  { label: "R1", iso: "2026-07-16T02:00:00-04:00" },
-  { label: "R2", iso: "2026-07-17T02:00:00-04:00" },
-  { label: "R3", iso: "2026-07-18T04:00:00-04:00" },
-  { label: "R4", iso: "2026-07-19T04:00:00-04:00" },
+  { label: "R1", iso: "2027-04-08T08:00:00-04:00" },
+  { label: "R2", iso: "2027-04-09T08:00:00-04:00" },
+  { label: "R3", iso: "2027-04-10T10:00:00-04:00" },
+  { label: "R4", iso: "2027-04-11T10:00:00-04:00" },
 ];
 
 function formatXTick(ts: number): string {
